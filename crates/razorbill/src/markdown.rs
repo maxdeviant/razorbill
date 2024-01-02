@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use pulldown_cmark::{self as md, Alignment, CodeBlockKind, Event, HeadingLevel, LinkType, Tag};
 
-use crate::html::HtmlElement;
+use crate::html::{br, code, hr, HtmlElement};
 
 pub fn markdown(text: &str) -> Vec<HtmlElement> {
     let mut options = md::Options::empty();
@@ -63,12 +63,12 @@ where
                         element.content = Some(text.to_string());
                     }
                 }
-                Event::Code(text) => todo!(),
+                Event::Code(text) => self.push(code().content(text.to_string())),
                 Event::Html(html) => todo!(),
-                Event::FootnoteReference(_) => todo!(),
                 Event::SoftBreak => todo!(),
-                Event::HardBreak => todo!(),
-                Event::Rule => todo!(),
+                Event::HardBreak => self.push(br()),
+                Event::Rule => self.push(hr()),
+                Event::FootnoteReference(_) => todo!(),
                 Event::TaskListMarker(checked) => todo!(),
             }
         }
