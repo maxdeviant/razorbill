@@ -4,23 +4,7 @@ use pulldown_cmark::{self as md, Alignment, CodeBlockKind, Event, HeadingLevel, 
 
 use crate::html::HtmlElement;
 
-pub fn markdown(text: &str) -> String {
-    let mut options = md::Options::empty();
-    options.insert(md::Options::ENABLE_TABLES);
-    options.insert(md::Options::ENABLE_FOOTNOTES);
-    options.insert(md::Options::ENABLE_STRIKETHROUGH);
-    options.insert(md::Options::ENABLE_TASKLISTS);
-    options.insert(md::Options::ENABLE_HEADING_ATTRIBUTES);
-
-    let parser = md::Parser::new_ext(text, options);
-
-    let mut html_output = String::new();
-    md::html::push_html(&mut html_output, parser);
-
-    html_output
-}
-
-pub fn markdown_to_html_elements(text: &str) -> Vec<HtmlElement> {
+pub fn markdown(text: &str) -> Vec<HtmlElement> {
     let mut options = md::Options::empty();
     options.insert(md::Options::ENABLE_TABLES);
     options.insert(md::Options::ENABLE_FOOTNOTES);
@@ -254,7 +238,7 @@ mod tests {
             1. Three
         "};
 
-        dbg!(markdown_to_html_elements(text));
+        dbg!(markdown(text));
     }
 
     #[test]
@@ -269,6 +253,6 @@ mod tests {
             | C    | 3     | 32      |
         "};
 
-        dbg!(markdown_to_html_elements(text));
+        dbg!(markdown(text));
     }
 }

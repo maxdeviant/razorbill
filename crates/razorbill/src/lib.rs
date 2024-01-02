@@ -18,11 +18,9 @@ mod tests {
 
         let root_element = html().child(
             body().child(
-                div().class("container").child(
-                    div()
-                        .class("content")
-                        .children(markdown_to_html_elements(text)),
-                ),
+                div()
+                    .class("container")
+                    .child(div().class("content").children(markdown(text))),
             ),
         );
 
