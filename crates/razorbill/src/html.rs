@@ -109,7 +109,7 @@ macro_rules! html_elements {
 
 html_elements!(
     a, blockquote, body, br, code, del, div, em, h1, h2, h3, h4, h5, h6, head, hr, html, img, li,
-    ol, p, pre, strong, table, td, th, thead, tr, ul
+    ol, p, pre, strong, style, table, td, th, thead, tr, ul
 );
 
 #[cfg(test)]

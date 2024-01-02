@@ -57,11 +57,38 @@ struct PageProps {
 }
 
 fn page(PageProps { children }: PageProps) -> HtmlElement {
-    html().child(
-        body()
-            .child(h1().content("Razorbill Blog"))
-            .child(div().children(children)),
-    )
+    let styles = r#"
+        body {
+            background-color: darkslategray;
+            color: #f4f4f4;
+        }
+
+        .heading {
+            font-size: 5rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .content {
+            max-width: 720px;
+            margin: auto;
+        }
+
+        .markdown p {
+            line-height: 1.5rem;
+        }
+    "#;
+
+    html()
+        .lang("en")
+        .child(head().child(style().content(styles)))
+        .child(
+            body()
+                .child(h1().class("heading text-center").content("Razorbill Blog"))
+                .child(div().class("content").children(children)),
+        )
 }
 
 struct PostProps {
@@ -69,5 +96,5 @@ struct PostProps {
 }
 
 fn post(PostProps { text }: PostProps) -> HtmlElement {
-    div().children(markdown(&text))
+    div().class("markdown").children(markdown(&text))
 }
