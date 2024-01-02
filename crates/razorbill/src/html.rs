@@ -18,6 +18,23 @@ impl HtmlElement {
         }
     }
 
+    fn attr<V>(mut self, name: impl Into<String>, value: impl Into<Option<V>>) -> Self
+    where
+        V: Into<String>,
+    {
+        let name = name.into();
+        match value.into() {
+            Some(id) => {
+                *self.attrs.entry(name).or_default() = id.into();
+            }
+            None => {
+                self.attrs.remove(&name);
+            }
+        }
+
+        self
+    }
+
     pub fn child(mut self, child: HtmlElement) -> Self {
         self.children.push(child);
         self
@@ -51,55 +68,25 @@ impl HtmlElement {
 }
 
 impl HtmlElement {
-    pub fn id<V>(mut self, id: impl Into<Option<V>>) -> Self
+    pub fn id<V>(self, id: impl Into<Option<V>>) -> Self
     where
         V: Into<String>,
     {
-        let attr_name = "id".to_string();
-        match id.into() {
-            Some(id) => {
-                *self.attrs.entry("id".to_string()).or_default() = id.into();
-            }
-            None => {
-                self.attrs.remove(&attr_name);
-            }
-        }
-
-        self
+        self.attr("id", id)
     }
 
-    pub fn class<V>(mut self, class: impl Into<Option<V>>) -> Self
+    pub fn class<V>(self, class: impl Into<Option<V>>) -> Self
     where
         V: Into<String>,
     {
-        let attr_name = "class".to_string();
-        match class.into() {
-            Some(id) => {
-                *self.attrs.entry(attr_name).or_default() = id.into();
-            }
-            None => {
-                self.attrs.remove(&attr_name);
-            }
-        }
-
-        self
+        self.attr("class", class)
     }
 
-    pub fn title<V>(mut self, title: impl Into<Option<V>>) -> Self
+    pub fn title<V>(self, title: impl Into<Option<V>>) -> Self
     where
         V: Into<String>,
     {
-        let attr_name = "title".to_string();
-        match title.into() {
-            Some(id) => {
-                *self.attrs.entry(attr_name).or_default() = id.into();
-            }
-            None => {
-                self.attrs.remove(&attr_name);
-            }
-        }
-
-        self
+        self.attr("title", title)
     }
 }
 
