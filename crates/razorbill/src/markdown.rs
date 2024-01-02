@@ -122,9 +122,11 @@ where
                 };
 
                 self.push(
-                    heading
-                        .id::<String>(id.map(Into::into))
-                        .class(classes.join(" ")),
+                    heading.id::<String>(id.map(Into::into)).class::<String>(
+                        Some(classes)
+                            .filter(|classes| !classes.is_empty())
+                            .map(|classes| classes.join(" ")),
+                    ),
                 )
             }
             Tag::Table(alignments) => {

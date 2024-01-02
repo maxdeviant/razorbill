@@ -108,8 +108,8 @@ macro_rules! html_elements {
 }
 
 html_elements!(
-    a, blockquote, br, code, del, div, em, h1, h2, h3, h4, h5, h6, img, li, ol, p, pre, strong,
-    table, td, th, thead, tr, ul
+    a, blockquote, body, br, code, del, div, em, h1, h2, h3, h4, h5, h6, head, html, img, li, ol,
+    p, pre, strong, table, td, th, thead, tr, ul
 );
 
 #[cfg(test)]
