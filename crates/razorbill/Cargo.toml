@@ -6,4 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-indexmap = "2.1.0"
+indexmap.workspace = true
+pulldown-cmark.workspace = true
+
+[dev-dependencies]
+indoc.workspace = true
