@@ -5,6 +5,7 @@ use indexmap::IndexMap;
 #[derive(Debug)]
 pub struct HtmlElement {
     pub tag_name: String,
+    pub content: Option<String>,
     pub children: Vec<HtmlElement>,
     pub attrs: IndexMap<String, String>,
 }
@@ -13,6 +14,7 @@ impl HtmlElement {
     pub fn new(tag: impl Into<String>) -> Self {
         Self {
             tag_name: tag.into(),
+            content: None,
             children: Vec::new(),
             attrs: IndexMap::new(),
         }
@@ -32,6 +34,11 @@ impl HtmlElement {
             }
         }
 
+        self
+    }
+
+    pub fn content(mut self, content: impl Into<String>) -> Self {
+        self.content = Some(content.into());
         self
     }
 
@@ -57,6 +64,10 @@ impl HtmlElement {
 
         write!(&mut html, ">")?;
 
+        if let Some(content) = &self.content {
+            write!(&mut html, "{}", content)?;
+        }
+
         for child in &self.children {
             write!(&mut html, "{}", child.render_to_string()?)?;
         }
@@ -81,36 +92,25 @@ macro_rules! create_attribute_methods {
 }
 
 impl HtmlElement {
-    create_attribute_methods!(class, id, lang, role, style, tabindex, title, translate);
+    create_attribute_methods!(
+        class, href, id, lang, role, src, start, style, tabindex, title, translate
+    );
 }
 
-pub fn div() -> HtmlElement {
-    HtmlElement::new("div")
+macro_rules! html_elements {
+    ($($name:ident),*) => {
+        $(
+            pub fn $name() -> HtmlElement {
+                HtmlElement::new(stringify!($name))
+            }
+        )*
+    }
 }
 
-pub fn h1() -> HtmlElement {
-    HtmlElement::new("h1")
-}
-
-pub fn h2() -> HtmlElement {
-    HtmlElement::new("h2")
-}
-
-pub fn h3() -> HtmlElement {
-    HtmlElement::new("h3")
-}
-
-pub fn h4() -> HtmlElement {
-    HtmlElement::new("h4")
-}
-
-pub fn h5() -> HtmlElement {
-    HtmlElement::new("h5")
-}
-
-pub fn h6() -> HtmlElement {
-    HtmlElement::new("h6")
-}
+html_elements!(
+    a, blockquote, br, code, del, div, em, h1, h2, h3, h4, h5, h6, img, li, ol, p, pre, strong,
+    table, td, th, thead, tr, ul
+);
 
 #[cfg(test)]
 mod tests {
@@ -118,16 +118,20 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let element = div().class("container").child(h1().class("heading"));
+        let element = div()
+            .class("container")
+            .child(h1().class("heading").content("Hello, world!"));
 
         dbg!(element);
     }
 
     #[test]
     fn test_render() {
-        let element = div()
-            .class("outer")
-            .child(div().class("inner").child(h1().class("heading")));
+        let element = div().class("outer").child(
+            div()
+                .class("inner")
+                .child(h1().class("heading").content("Hello, world!")),
+        );
 
         dbg!(element.render_to_string().unwrap());
     }
