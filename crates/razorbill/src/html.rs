@@ -67,27 +67,21 @@ impl HtmlElement {
     }
 }
 
+macro_rules! create_attribute_methods {
+    ($($name:ident),*) => {
+        $(
+            pub fn $name<V>(self, value: impl Into<Option<V>>) -> Self
+            where
+                V: Into<String>,
+            {
+                self.attr(stringify!($name), value)
+            }
+        )*
+    }
+}
+
 impl HtmlElement {
-    pub fn id<V>(self, id: impl Into<Option<V>>) -> Self
-    where
-        V: Into<String>,
-    {
-        self.attr("id", id)
-    }
-
-    pub fn class<V>(self, class: impl Into<Option<V>>) -> Self
-    where
-        V: Into<String>,
-    {
-        self.attr("class", class)
-    }
-
-    pub fn title<V>(self, title: impl Into<Option<V>>) -> Self
-    where
-        V: Into<String>,
-    {
-        self.attr("title", title)
-    }
+    create_attribute_methods!(class, id, lang, role, style, tabindex, title, translate);
 }
 
 pub fn div() -> HtmlElement {
