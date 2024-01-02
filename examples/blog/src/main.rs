@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use razorbill::html::*;
-use razorbill::markdown::markdown;
+use razorbill::markdown::{markdown, MarkdownComponents};
 
 struct Post {
     pub slug: String,
@@ -76,7 +76,8 @@ fn page(PageProps { children }: PageProps) -> HtmlElement {
             margin: auto;
         }
 
-        .markdown p {
+        .post-paragraph {
+            font-size: 1.2rem;
             line-height: 1.5rem;
         }
     "#;
@@ -96,5 +97,15 @@ struct PostProps {
 }
 
 fn post(PostProps { text }: PostProps) -> HtmlElement {
-    div().class("markdown").children(markdown(&text))
+    div().children(markdown(
+        &text,
+        MarkdownComponents {
+            p: Box::new(post_paragraph),
+            ..Default::default()
+        },
+    ))
+}
+
+fn post_paragraph() -> HtmlElement {
+    p().class("post-paragraph")
 }
