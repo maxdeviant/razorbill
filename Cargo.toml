@@ -4,6 +4,7 @@ members = ["crates/*", "examples/*"]
 
 [workspace.dependencies]
 anyhow = "1.0.78"
+grass = "0.13.1"
 indexmap = "2.1.0"
 indoc = "2.0.4"
 pulldown-cmark = "0.9.3"
