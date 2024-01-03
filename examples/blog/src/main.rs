@@ -3,13 +3,9 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use razorbill::content::Page;
 use razorbill::html::*;
 use razorbill::markdown::{markdown, MarkdownComponents};
-
-struct Post {
-    pub slug: String,
-    pub text: String,
-}
 
 fn main() -> Result<()> {
     let mut posts = Vec::new();
@@ -17,26 +13,18 @@ fn main() -> Result<()> {
     for entry in fs::read_dir("examples/blog/content/posts")? {
         let entry = entry?;
 
-        let filename = entry
-            .path()
-            .file_stem()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
+        let page = Page::from_path(entry.path())?;
 
-        let text = fs::read_to_string(entry.path())?;
-
-        posts.push(Post {
-            slug: filename,
-            text,
-        });
+        posts.push(page);
     }
 
     fs::create_dir_all("examples/blog/public")?;
 
     for p in posts {
         let rendered = page(PageProps {
-            children: vec![post(PostProps { text: p.text })],
+            children: vec![post(PostProps {
+                text: p.raw_content,
+            })],
         })
         .render_to_string()?;
 

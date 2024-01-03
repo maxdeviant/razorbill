@@ -1,3 +1,4 @@
+pub mod content;
 pub mod html;
 pub mod markdown;
 
