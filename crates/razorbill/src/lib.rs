@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -35,6 +36,7 @@ pub struct Site {
     pub root_path: PathBuf,
     pub content_path: PathBuf,
     pub output_path: PathBuf,
+    pub templates: HashMap<String, Box<dyn Fn(&Page) -> HtmlElement>>,
     pub pages: Vec<Page>,
 }
 
@@ -46,6 +48,7 @@ impl Site {
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
             output_path: root_path.join("public"),
+            templates: HashMap::new(),
             pages: Vec::new(),
         }
     }
@@ -81,10 +84,15 @@ impl Site {
         Ok(())
     }
 
-    pub fn render(
+    pub fn add_template(
         &mut self,
-        page_template: impl Fn(&Page) -> HtmlElement,
-    ) -> Result<(), RenderSiteError> {
+        name: impl Into<String>,
+        template: impl Fn(&Page) -> HtmlElement + 'static,
+    ) {
+        self.templates.insert(name.into(), Box::new(template));
+    }
+
+    pub fn render(&mut self) -> Result<(), RenderSiteError> {
         for page in &self.pages {
             let output_dir = self
                 .output_path
@@ -94,6 +102,8 @@ impl Site {
 
             let output_path = output_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
+
+            let page_template = self.templates.get("page").expect("no page template set");
 
             let rendered = page_template(page).render_to_string()?;
 

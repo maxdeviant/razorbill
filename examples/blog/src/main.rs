@@ -5,14 +5,16 @@ use razorbill::{html::*, Site};
 fn main() -> Result<()> {
     let mut site = Site::new("examples/blog");
 
-    site.load()?;
-    site.render(|p| {
+    site.add_template("page", |p| {
         page(PageProps {
             children: vec![post(PostProps {
                 text: p.raw_content.clone(),
             })],
         })
-    })?;
+    });
+
+    site.load()?;
+    site.render()?;
 
     Ok(())
 }
