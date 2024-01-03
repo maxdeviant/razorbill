@@ -1,7 +1,3 @@
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::PathBuf;
-
 use anyhow::Result;
 use razorbill::markdown::{markdown, MarkdownComponents};
 use razorbill::{html::*, Site};
@@ -10,25 +6,13 @@ fn main() -> Result<()> {
     let mut site = Site::new("examples/blog");
 
     site.load()?;
-
-    fs::create_dir_all("examples/blog/public")?;
-
-    for p in site.pages {
-        let rendered = page(PageProps {
+    site.render(|p| {
+        page(PageProps {
             children: vec![post(PostProps {
-                text: p.raw_content,
+                text: p.raw_content.clone(),
             })],
         })
-        .render_to_string()?;
-
-        let filepath =
-            PathBuf::from_iter(["examples", "blog", "public", &format!("{}.html", p.slug)]);
-
-        let mut out_file = File::create(&filepath)?;
-        out_file.write_all(rendered.as_bytes())?;
-
-        println!("Wrote {:?}", filepath);
-    }
+    })?;
 
     Ok(())
 }

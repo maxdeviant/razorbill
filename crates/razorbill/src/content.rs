@@ -9,10 +9,34 @@ use thiserror::Error;
 pub use front_matter::*;
 
 #[derive(Debug)]
+pub struct FileInfo {
+    pub path: PathBuf,
+}
+
+#[derive(Debug)]
 pub struct Page {
     pub meta: PageFrontMatter,
+    pub file: FileInfo,
+    pub path: PagePath,
     pub slug: String,
     pub raw_content: String,
+}
+
+#[derive(Debug)]
+pub struct PagePath(pub(crate) String);
+
+impl PagePath {
+    pub fn from_file_path(
+        root_path: impl AsRef<Path>,
+        file_path: impl AsRef<Path>,
+    ) -> Result<Self, ()> {
+        let file_path = file_path.as_ref().strip_prefix(root_path).unwrap();
+
+        let parent = file_path.parent().unwrap().to_str().unwrap();
+        let slug = file_path.file_stem().unwrap().to_str().unwrap();
+
+        Ok(Self(format!("/{parent}/{slug}")))
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,14 +55,21 @@ pub enum ParsePageError {
 }
 
 impl Page {
-    pub fn from_path(path: impl AsRef<Path>) -> Result<Self, ParsePageError> {
+    pub fn from_path(
+        root_path: impl AsRef<Path>,
+        path: impl AsRef<Path>,
+    ) -> Result<Self, ParsePageError> {
         let path = path.as_ref();
         let contents = fs::read_to_string(path)?;
 
-        Self::parse(&contents, path)
+        Self::parse(&contents, root_path, path)
     }
 
-    pub fn parse(text: &str, filepath: &Path) -> Result<Self, ParsePageError> {
+    pub fn parse(
+        text: &str,
+        root_path: impl AsRef<Path>,
+        filepath: &Path,
+    ) -> Result<Self, ParsePageError> {
         let (front_matter, content) =
             parse_front_matter::<PageFrontMatter>(text).ok_or_else(|| {
                 ParsePageError::InvalidFrontMatter {
@@ -46,13 +77,21 @@ impl Page {
                 }
             })?;
 
+        let file = FileInfo {
+            path: filepath.to_owned(),
+        };
+
         let slug = front_matter
             .slug
             .clone()
             .unwrap_or_else(|| filepath.file_stem().unwrap().to_string_lossy().to_string());
 
+        let path = PagePath::from_file_path(root_path, &file.path).unwrap();
+
         Ok(Self {
             meta: front_matter,
+            file,
+            path,
             slug,
             raw_content: content.to_string(),
         })

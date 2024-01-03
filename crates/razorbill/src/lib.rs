@@ -1,9 +1,13 @@
+use std::fs::{self, File};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use thiserror::Error;
 use walkdir::WalkDir;
 
 use crate::content::{Page, ParsePageError};
+use crate::html::HtmlElement;
 
 pub mod content;
 pub mod html;
@@ -18,9 +22,19 @@ pub enum LoadSiteError {
     ParsePage(#[from] ParsePageError),
 }
 
+#[derive(Error, Debug)]
+pub enum RenderSiteError {
+    #[error("IO error: {0}")]
+    Io(#[from] io::Error),
+
+    #[error("render error: {0}")]
+    RenderPage(#[from] std::fmt::Error),
+}
+
 pub struct Site {
     pub root_path: PathBuf,
     pub content_path: PathBuf,
+    pub output_path: PathBuf,
     pub pages: Vec<Page>,
 }
 
@@ -31,6 +45,7 @@ impl Site {
         Self {
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
+            output_path: root_path.join("public"),
             pages: Vec::new(),
         }
     }
@@ -55,13 +70,37 @@ impl Site {
             }
 
             if !path.is_dir() {
-                pages.push(Page::from_path(path)?);
+                pages.push(Page::from_path(&self.content_path, path)?);
 
                 continue;
             }
         }
 
         self.pages = pages;
+
+        Ok(())
+    }
+
+    pub fn render(
+        &mut self,
+        page_template: impl Fn(&Page) -> HtmlElement,
+    ) -> Result<(), RenderSiteError> {
+        for page in &self.pages {
+            let output_dir = self
+                .output_path
+                .join(PathBuf::from_str(&page.path.0.trim_start_matches("/")).unwrap());
+
+            fs::create_dir_all(&output_dir)?;
+
+            let output_path = output_dir.join("index.html");
+            let mut output_file = File::create(&output_path)?;
+
+            let rendered = page_template(page).render_to_string()?;
+
+            output_file.write_all(rendered.as_bytes())?;
+
+            println!("Wrote {:?}", output_path);
+        }
 
         Ok(())
     }
