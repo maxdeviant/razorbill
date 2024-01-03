@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     site.add_template("page", |p| {
         page(PageProps {
             children: vec![post(PostProps {
-                text: p.raw_content.clone(),
+                text: &p.raw_content,
             })],
         })
     });
@@ -59,8 +59,8 @@ fn page(PageProps { children }: PageProps) -> HtmlElement {
         )
 }
 
-struct PostProps {
-    pub text: String,
+struct PostProps<'a> {
+    pub text: &'a str,
 }
 
 fn post(PostProps { text }: PostProps) -> HtmlElement {
