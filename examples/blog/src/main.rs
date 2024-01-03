@@ -3,24 +3,17 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use razorbill::content::Page;
-use razorbill::html::*;
 use razorbill::markdown::{markdown, MarkdownComponents};
+use razorbill::{html::*, Site};
 
 fn main() -> Result<()> {
-    let mut posts = Vec::new();
+    let mut site = Site::new("examples/blog");
 
-    for entry in fs::read_dir("examples/blog/content/posts")? {
-        let entry = entry?;
-
-        let page = Page::from_path(entry.path())?;
-
-        posts.push(page);
-    }
+    site.load()?;
 
     fs::create_dir_all("examples/blog/public")?;
 
-    for p in posts {
+    for p in site.pages {
         let rendered = page(PageProps {
             children: vec![post(PostProps {
                 text: p.raw_content,
