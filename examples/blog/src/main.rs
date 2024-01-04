@@ -20,6 +20,7 @@ fn main() -> Result<()> {
         )
         .add_page_template("prose", |page| {
             prose(ProseProps {
+                page,
                 children: vec![post(PostProps {
                     text: &page.raw_content,
                 })],
@@ -31,6 +32,35 @@ fn main() -> Result<()> {
     site.render()?;
 
     Ok(())
+}
+
+struct BasePageProps<'a> {
+    pub title: &'a str,
+    pub styles: Vec<&'a str>,
+    pub children: Vec<HtmlElement>,
+}
+
+fn base_page(props: BasePageProps) -> HtmlElement {
+    html()
+        .lang("en")
+        .child(
+            head()
+                .child(meta().charset("utf-8"))
+                .child(meta().http_equiv("x-ua-compatible").content_("ie=edge"))
+                .child(
+                    meta()
+                        .name("viewport")
+                        .content_("width=device-width, initial-scale=1.0, maximum-scale=1"),
+                )
+                .child(title().content(props.title))
+                .children(
+                    props
+                        .styles
+                        .into_iter()
+                        .map(|styles| style().content(styles)),
+                ),
+        )
+        .children(props.children)
 }
 
 struct PageProps<'a> {
@@ -64,25 +94,25 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
         }
     "#;
 
-    html()
-        .lang("en")
-        .child(head().child(style().content(styles)))
-        .child(
-            body()
-                .child(h1().class("heading text-center").content("Razorbill Blog"))
-                .child(
-                    h3().class("text-center")
-                        .content(format!("path = {}", page.path)),
-                )
-                .child(div().class("content").children(children)),
-        )
+    base_page(BasePageProps {
+        title: page.meta.title.as_ref().unwrap_or(&page.slug),
+        styles: vec![styles],
+        children: vec![body()
+            .child(h1().class("heading text-center").content("Razorbill Blog"))
+            .child(
+                h3().class("text-center")
+                    .content(format!("path = {}", page.path)),
+            )
+            .child(div().class("content").children(children))],
+    })
 }
 
-struct ProseProps {
+struct ProseProps<'a> {
+    pub page: &'a Page,
     pub children: Vec<HtmlElement>,
 }
 
-fn prose(ProseProps { children }: ProseProps) -> HtmlElement {
+fn prose(ProseProps { page, children }: ProseProps) -> HtmlElement {
     let styles = r#"
         body {
             background-color: papayawhip;
@@ -108,14 +138,13 @@ fn prose(ProseProps { children }: ProseProps) -> HtmlElement {
         }
     "#;
 
-    html()
-        .lang("en")
-        .child(head().child(style().content(styles)))
-        .child(
-            body()
-                .child(h1().class("heading text-center").content("Razorbill Blog"))
-                .child(div().class("content").children(children)),
-        )
+    base_page(BasePageProps {
+        title: page.meta.title.as_ref().unwrap_or(&page.slug),
+        styles: vec![styles],
+        children: vec![body()
+            .child(h1().class("heading text-center").content("Razorbill Blog"))
+            .child(div().class("content").children(children))],
+    })
 }
 
 struct PostProps<'a> {

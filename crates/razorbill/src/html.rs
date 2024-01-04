@@ -93,8 +93,22 @@ macro_rules! create_attribute_methods {
 
 impl HtmlElement {
     create_attribute_methods!(
-        class, href, id, lang, role, src, start, style, tabindex, title, translate
+        charset, class, href, id, lang, name, role, src, start, style, tabindex, title, translate
     );
+
+    pub fn content_<V>(self, value: impl Into<Option<V>>) -> Self
+    where
+        V: Into<String>,
+    {
+        self.attr("content", value)
+    }
+
+    pub fn http_equiv<V>(self, value: impl Into<Option<V>>) -> Self
+    where
+        V: Into<String>,
+    {
+        self.attr("http-equiv", value)
+    }
 }
 
 macro_rules! html_elements {
@@ -109,7 +123,7 @@ macro_rules! html_elements {
 
 html_elements!(
     a, blockquote, body, br, code, del, div, em, h1, h2, h3, h4, h5, h6, head, hr, html, img, li,
-    ol, p, pre, strong, style, table, td, th, thead, tr, ul
+    meta, ol, p, pre, strong, style, table, td, th, thead, title, tr, ul
 );
 
 #[cfg(test)]
