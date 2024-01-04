@@ -7,7 +7,7 @@ use std::str::FromStr;
 use thiserror::Error;
 use walkdir::WalkDir;
 
-use crate::content::{Page, ParsePageError};
+use crate::content::{Page, ParsePageError, Section};
 use crate::html::HtmlElement;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -18,7 +18,7 @@ pub enum TemplateKey {
 
 struct Templates {
     pub index: Box<dyn Fn() -> HtmlElement>,
-    pub section: HashMap<TemplateKey, Box<dyn Fn() -> HtmlElement>>,
+    pub section: HashMap<TemplateKey, Box<dyn Fn(&Section) -> HtmlElement>>,
     pub page: HashMap<TemplateKey, Box<dyn Fn(&Page) -> HtmlElement>>,
 }
 
@@ -148,7 +148,7 @@ impl SiteBuilder<WithRootPath> {
     pub fn templates(
         self,
         index: impl Fn() -> HtmlElement + 'static,
-        section: impl Fn() -> HtmlElement + 'static,
+        section: impl Fn(&Section) -> HtmlElement + 'static,
         page: impl Fn(&Page) -> HtmlElement + 'static,
     ) -> SiteBuilder<WithTemplates> {
         SiteBuilder {
@@ -158,7 +158,7 @@ impl SiteBuilder<WithRootPath> {
                     index: Box::new(index),
                     section: HashMap::from_iter([(
                         TemplateKey::Default,
-                        Box::new(section) as Box<dyn Fn() -> HtmlElement>,
+                        Box::new(section) as Box<dyn Fn(&Section) -> HtmlElement>,
                     )]),
                     page: HashMap::from_iter([(
                         TemplateKey::Default,
@@ -179,7 +179,7 @@ impl SiteBuilder<WithTemplates> {
     pub fn add_section_template(
         mut self,
         name: impl Into<String>,
-        template: impl Fn() -> HtmlElement + 'static,
+        template: impl Fn(&Section) -> HtmlElement + 'static,
     ) -> Self {
         self.state
             .templates

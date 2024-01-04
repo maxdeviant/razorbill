@@ -1,4 +1,5 @@
 use anyhow::Result;
+use razorbill::content::Page;
 use razorbill::markdown::{markdown, MarkdownComponents};
 use razorbill::{html::*, Site};
 
@@ -7,9 +8,10 @@ fn main() -> Result<()> {
         .root("examples/blog")
         .templates(
             || div(),
-            || div(),
+            |_section| div(),
             |page| {
                 crate::page(PageProps {
+                    page,
                     children: vec![post(PostProps {
                         text: &page.raw_content,
                     })],
@@ -31,11 +33,12 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-struct PageProps {
+struct PageProps<'a> {
+    pub page: &'a Page,
     pub children: Vec<HtmlElement>,
 }
 
-fn page(PageProps { children }: PageProps) -> HtmlElement {
+fn page(PageProps { page, children }: PageProps) -> HtmlElement {
     let styles = r#"
         body {
             background-color: darkslategray;
@@ -67,6 +70,10 @@ fn page(PageProps { children }: PageProps) -> HtmlElement {
         .child(
             body()
                 .child(h1().class("heading text-center").content("Razorbill Blog"))
+                .child(
+                    h3().class("text-center")
+                        .content(format!("path = {}", page.path)),
+                )
                 .child(div().class("content").children(children)),
         )
 }

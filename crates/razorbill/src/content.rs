@@ -1,5 +1,6 @@
 mod front_matter;
 
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +15,17 @@ pub struct FileInfo {
 }
 
 #[derive(Debug)]
+pub struct Section {
+    pub meta: SectionFrontMatter,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SectionFrontMatter {
+    pub title: Option<String>,
+    pub template: Option<String>,
+}
+
+#[derive(Debug)]
 pub struct Page {
     pub meta: PageFrontMatter,
     pub file: FileInfo,
@@ -24,6 +36,12 @@ pub struct Page {
 
 #[derive(Debug)]
 pub struct PagePath(pub(crate) String);
+
+impl fmt::Display for PagePath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl PagePath {
     pub fn from_file_path(
