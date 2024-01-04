@@ -64,6 +64,10 @@ impl HtmlElement {
     pub fn render_to_string(&self) -> Result<String, std::fmt::Error> {
         let mut html = String::new();
 
+        if self.tag_name == "html" {
+            write!(&mut html, "<!DOCTYPE html>")?;
+        }
+
         write!(&mut html, "<{}", self.tag_name)?;
 
         for (name, value) in &self.attrs {
