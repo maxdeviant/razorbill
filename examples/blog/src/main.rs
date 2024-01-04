@@ -3,15 +3,20 @@ use razorbill::markdown::{markdown, MarkdownComponents};
 use razorbill::{html::*, Site};
 
 fn main() -> Result<()> {
-    let mut site = Site::new("examples/blog");
-
-    site.add_template("page", |p| {
-        page(PageProps {
-            children: vec![post(PostProps {
-                text: &p.raw_content,
-            })],
-        })
-    });
+    let mut site = Site::builder()
+        .root("examples/blog")
+        .templates(
+            || div(),
+            || div(),
+            |p| {
+                page(PageProps {
+                    children: vec![post(PostProps {
+                        text: &p.raw_content,
+                    })],
+                })
+            },
+        )
+        .build();
 
     site.load()?;
     site.render()?;
