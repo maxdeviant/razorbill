@@ -20,6 +20,15 @@ impl HtmlElement {
         }
     }
 
+    /// Returns whether this element is a [void element](https://developer.mozilla.org/en-US/docs/Glossary/Void_element).
+    fn is_void(&self) -> bool {
+        match self.tag_name.as_str() {
+            "area" | "base" | "br" | "col" | "embed" | "hr" | "img" | "input" | "link" | "meta"
+            | "param" | "source" | "track" | "wbr" => true,
+            _ => false,
+        }
+    }
+
     fn attr<V>(mut self, name: impl Into<String>, value: impl Into<Option<V>>) -> Self
     where
         V: Into<String>,
@@ -63,6 +72,10 @@ impl HtmlElement {
         }
 
         write!(&mut html, ">")?;
+
+        if self.is_void() {
+            return Ok(html);
+        }
 
         if let Some(content) = &self.content {
             write!(&mut html, "{}", content)?;
