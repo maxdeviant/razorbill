@@ -8,14 +8,21 @@ fn main() -> Result<()> {
         .templates(
             || div(),
             || div(),
-            |p| {
-                page(PageProps {
+            |page| {
+                crate::page(PageProps {
                     children: vec![post(PostProps {
-                        text: &p.raw_content,
+                        text: &page.raw_content,
                     })],
                 })
             },
         )
+        .add_page_template("prose", |page| {
+            prose(ProseProps {
+                children: vec![post(PostProps {
+                    text: &page.raw_content,
+                })],
+            })
+        })
         .build();
 
     site.load()?;
@@ -33,6 +40,46 @@ fn page(PageProps { children }: PageProps) -> HtmlElement {
         body {
             background-color: darkslategray;
             color: #f4f4f4;
+        }
+
+        .heading {
+            font-size: 5rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .content {
+            max-width: 720px;
+            margin: auto;
+        }
+
+        .post-paragraph {
+            font-size: 1.2rem;
+            line-height: 1.5rem;
+        }
+    "#;
+
+    html()
+        .lang("en")
+        .child(head().child(style().content(styles)))
+        .child(
+            body()
+                .child(h1().class("heading text-center").content("Razorbill Blog"))
+                .child(div().class("content").children(children)),
+        )
+}
+
+struct ProseProps {
+    pub children: Vec<HtmlElement>,
+}
+
+fn prose(ProseProps { children }: ProseProps) -> HtmlElement {
+    let styles = r#"
+        body {
+            background-color: papayawhip;
+            color: palevioletred;
         }
 
         .heading {

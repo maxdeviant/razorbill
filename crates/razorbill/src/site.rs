@@ -10,6 +10,18 @@ use walkdir::WalkDir;
 use crate::content::{Page, ParsePageError};
 use crate::html::HtmlElement;
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum TemplateKey {
+    Default,
+    Custom(String),
+}
+
+struct Templates {
+    pub index: Box<dyn Fn() -> HtmlElement>,
+    pub section: HashMap<TemplateKey, Box<dyn Fn() -> HtmlElement>>,
+    pub page: HashMap<TemplateKey, Box<dyn Fn(&Page) -> HtmlElement>>,
+}
+
 #[derive(Error, Debug)]
 pub enum LoadSiteError {
     #[error("failed to walk content directory: {0}")]
@@ -26,21 +38,16 @@ pub enum RenderSiteError {
 
     #[error("render error: {0}")]
     RenderPage(#[from] std::fmt::Error),
-}
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-enum TemplateKind {
-    Index,
-    Section,
-    Page,
-    Custom(String),
+    #[error("template not found: {0:?}")]
+    TemplateNotFound(TemplateKey),
 }
 
 pub struct Site {
     root_path: PathBuf,
     content_path: PathBuf,
     output_path: PathBuf,
-    templates: HashMap<TemplateKind, Box<dyn Fn(&Page) -> HtmlElement>>,
+    templates: Templates,
     pages: Vec<Page>,
 }
 
@@ -80,15 +87,6 @@ impl Site {
         Ok(())
     }
 
-    pub fn add_template(
-        &mut self,
-        name: impl Into<String>,
-        template: impl Fn(&Page) -> HtmlElement + 'static,
-    ) {
-        self.templates
-            .insert(TemplateKind::Custom(name.into()), Box::new(template));
-    }
-
     pub fn render(&mut self) -> Result<(), RenderSiteError> {
         for page in &self.pages {
             let output_dir = self
@@ -100,10 +98,18 @@ impl Site {
             let output_path = output_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
 
+            let template_name = page
+                .meta
+                .template
+                .clone()
+                .map(TemplateKey::Custom)
+                .unwrap_or(TemplateKey::Default);
+
             let page_template = self
                 .templates
-                .get(&TemplateKind::Page)
-                .expect("no page template set");
+                .page
+                .get(&template_name)
+                .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
 
             let rendered = page_template(page).render_to_string()?;
 
@@ -114,19 +120,6 @@ impl Site {
 
         Ok(())
     }
-}
-
-// pub struct
-
-pub struct WithRootPath {
-    root_path: PathBuf,
-}
-
-pub struct WithTemplates {
-    root_path: PathBuf,
-    index_template: Box<dyn Fn() -> HtmlElement>,
-    section_template: Box<dyn Fn() -> HtmlElement>,
-    page_template: Box<dyn Fn(&Page) -> HtmlElement>,
 }
 
 pub struct SiteBuilder<T> {
@@ -147,6 +140,10 @@ impl SiteBuilder<()> {
     }
 }
 
+pub struct WithRootPath {
+    root_path: PathBuf,
+}
+
 impl SiteBuilder<WithRootPath> {
     pub fn templates(
         self,
@@ -157,28 +154,60 @@ impl SiteBuilder<WithRootPath> {
         SiteBuilder {
             state: WithTemplates {
                 root_path: self.state.root_path,
-                index_template: Box::new(index),
-                section_template: Box::new(section),
-                page_template: Box::new(page),
+                templates: Templates {
+                    index: Box::new(index),
+                    section: HashMap::from_iter([(
+                        TemplateKey::Default,
+                        Box::new(section) as Box<dyn Fn() -> HtmlElement>,
+                    )]),
+                    page: HashMap::from_iter([(
+                        TemplateKey::Default,
+                        Box::new(page) as Box<dyn Fn(&Page) -> HtmlElement>,
+                    )]),
+                },
             },
         }
     }
 }
 
+pub struct WithTemplates {
+    root_path: PathBuf,
+    templates: Templates,
+}
+
 impl SiteBuilder<WithTemplates> {
+    pub fn add_section_template(
+        mut self,
+        name: impl Into<String>,
+        template: impl Fn() -> HtmlElement + 'static,
+    ) -> Self {
+        self.state
+            .templates
+            .section
+            .insert(TemplateKey::Custom(name.into()), Box::new(template));
+        self
+    }
+
+    pub fn add_page_template(
+        mut self,
+        name: impl Into<String>,
+        template: impl Fn(&Page) -> HtmlElement + 'static,
+    ) -> Self {
+        self.state
+            .templates
+            .page
+            .insert(TemplateKey::Custom(name.into()), Box::new(template));
+        self
+    }
+
     pub fn build(self) -> Site {
         let root_path = self.state.root_path;
-
-        let mut templates = HashMap::new();
-        // templates.insert(TemplateKind::Index, self.state.index_template);
-        // templates.insert(TemplateKind::Section, self.state.section_template);
-        templates.insert(TemplateKind::Page, self.state.page_template);
 
         Site {
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
             output_path: root_path.join("public"),
-            templates,
+            templates: self.state.templates,
             pages: Vec::new(),
         }
     }

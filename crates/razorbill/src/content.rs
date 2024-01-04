@@ -43,6 +43,7 @@ impl PagePath {
 pub struct PageFrontMatter {
     pub title: Option<String>,
     pub slug: Option<String>,
+    pub template: Option<String>,
 }
 
 #[derive(Error, Debug)]
