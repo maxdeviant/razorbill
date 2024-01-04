@@ -53,6 +53,11 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                         .content_("width=device-width, initial-scale=1.0, maximum-scale=1"),
                 )
                 .child(title().content(props.title))
+                .child(
+                    link()
+                        .rel("stylesheet")
+                        .href("https://unpkg.com/tachyons@4.12.0/css/tachyons.min.css"),
+                )
                 .children(
                     props
                         .styles
@@ -79,10 +84,6 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
             font-size: 5rem;
         }
 
-        .text-center {
-            text-align: center;
-        }
-
         .content {
             max-width: 720px;
             margin: auto;
@@ -98,11 +99,8 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
         title: page.meta.title.as_ref().unwrap_or(&page.slug),
         styles: vec![styles],
         children: vec![body()
-            .child(h1().class("heading text-center").content("Razorbill Blog"))
-            .child(
-                h3().class("text-center")
-                    .content(format!("path = {}", page.path)),
-            )
+            .child(h1().class("heading tc").content("Razorbill Blog"))
+            .child(h3().class("tc").content(format!("path = {}", page.path)))
             .child(div().class("content").children(children))],
     })
 }
@@ -123,10 +121,6 @@ fn prose(ProseProps { page, children }: ProseProps) -> HtmlElement {
             font-size: 5rem;
         }
 
-        .text-center {
-            text-align: center;
-        }
-
         .content {
             max-width: 720px;
             margin: auto;
@@ -142,7 +136,7 @@ fn prose(ProseProps { page, children }: ProseProps) -> HtmlElement {
         title: page.meta.title.as_ref().unwrap_or(&page.slug),
         styles: vec![styles],
         children: vec![body()
-            .child(h1().class("heading text-center").content("Razorbill Blog"))
+            .child(h1().class("heading tc").content("Razorbill Blog"))
             .child(div().class("content").children(children))],
     })
 }
