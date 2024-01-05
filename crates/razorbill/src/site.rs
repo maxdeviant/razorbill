@@ -51,8 +51,8 @@ pub struct Site {
     content_path: PathBuf,
     output_path: PathBuf,
     templates: Templates,
-    sections: Vec<Section>,
-    pages: Vec<Page>,
+    sections: HashMap<PathBuf, Section>,
+    pages: HashMap<PathBuf, Page>,
 }
 
 impl Site {
@@ -91,14 +91,19 @@ impl Site {
             }
         }
 
-        self.sections = sections;
-        self.pages = pages;
+        for section in sections {
+            self.sections.insert(section.file.path.clone(), section);
+        }
+
+        for page in pages {
+            self.pages.insert(page.file.path.clone(), page);
+        }
 
         Ok(())
     }
 
     pub fn render(&mut self) -> Result<(), RenderSiteError> {
-        for section in &self.sections {
+        for section in self.sections.values() {
             let output_dir = self.output_path.join(
                 PathBuf::from_str(
                     &section
@@ -133,7 +138,7 @@ impl Site {
             output_file.write_all(rendered.as_bytes())?;
         }
 
-        for page in &self.pages {
+        for page in self.pages.values() {
             let output_dir = self
                 .output_path
                 .join(PathBuf::from_str(&page.path.0.trim_start_matches("/")).unwrap());
@@ -253,8 +258,8 @@ impl SiteBuilder<WithTemplates> {
             content_path: root_path.join("content"),
             output_path: root_path.join("public"),
             templates: self.state.templates,
-            sections: Vec::new(),
-            pages: Vec::new(),
+            sections: HashMap::new(),
+            pages: HashMap::new(),
         }
     }
 }
