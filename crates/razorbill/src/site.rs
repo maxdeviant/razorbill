@@ -99,6 +99,14 @@ impl Site {
             self.pages.insert(page.file.path.clone(), page);
         }
 
+        for (path, page) in self.pages.iter_mut() {
+            let parent_section_path = page.file.parent.join("_index.md");
+
+            if let Some(parent_section) = self.sections.get_mut(&parent_section_path) {
+                parent_section.pages.push(path.clone());
+            }
+        }
+
         Ok(())
     }
 

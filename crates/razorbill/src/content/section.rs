@@ -39,6 +39,7 @@ pub struct Section {
     pub file: FileInfo,
     pub path: SectionPath,
     pub raw_content: String,
+    pub pages: Vec<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,6 +83,7 @@ impl Section {
 
         let file = FileInfo {
             path: filepath.to_owned(),
+            parent: filepath.parent().unwrap_or(root_path.as_ref()).to_owned(),
         };
 
         let path = SectionPath::from_file_path(root_path, &file.path).unwrap();
@@ -91,6 +93,7 @@ impl Section {
             file,
             path,
             raw_content: content.to_string(),
+            pages: Vec::new(),
         })
     }
 }
