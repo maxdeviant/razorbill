@@ -7,7 +7,7 @@ use std::str::FromStr;
 use thiserror::Error;
 use walkdir::WalkDir;
 
-use crate::content::{Page, ParsePageError, Section};
+use crate::content::{Page, ParsePageError, ParseSectionError, Section};
 use crate::html::HtmlElement;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -26,6 +26,9 @@ struct Templates {
 pub enum LoadSiteError {
     #[error("failed to walk content directory: {0}")]
     Io(#[from] walkdir::Error),
+
+    #[error("failed to parse section: {0}")]
+    ParseSection(#[from] ParseSectionError),
 
     #[error("failed to parse page: {0}")]
     ParsePage(#[from] ParsePageError),
@@ -48,6 +51,7 @@ pub struct Site {
     content_path: PathBuf,
     output_path: PathBuf,
     templates: Templates,
+    sections: Vec<Section>,
     pages: Vec<Page>,
 }
 
@@ -62,6 +66,7 @@ impl Site {
             .into_iter();
 
         let mut pages = Vec::new();
+        let mut sections = Vec::new();
 
         for entry in walker {
             let entry = entry?;
@@ -71,23 +76,63 @@ impl Site {
                 continue;
             };
 
-            if !path.is_dir() && (!filename.ends_with(".md") || filename.starts_with(".")) {
-                continue;
-            }
-
             if !path.is_dir() {
-                pages.push(Page::from_path(&self.content_path, path)?);
+                if !filename.ends_with(".md")
+                    || filename.starts_with(".")
+                    || filename == "_index.md"
+                {
+                    continue;
+                }
 
-                continue;
+                pages.push(Page::from_path(&self.content_path, path)?);
+            } else {
+                let section = Section::from_path(&self.content_path, path)?;
+                sections.push(section);
             }
         }
 
+        self.sections = sections;
         self.pages = pages;
 
         Ok(())
     }
 
     pub fn render(&mut self) -> Result<(), RenderSiteError> {
+        for section in &self.sections {
+            let output_dir = self.output_path.join(
+                PathBuf::from_str(
+                    &section
+                        .path
+                        .0
+                        .trim_end_matches("/_index")
+                        .trim_start_matches("/"),
+                )
+                .unwrap(),
+            );
+
+            fs::create_dir_all(&output_dir)?;
+
+            let output_path = output_dir.join("index.html");
+            let mut output_file = File::create(&output_path)?;
+
+            let template_name = section
+                .meta
+                .template
+                .clone()
+                .map(TemplateKey::Custom)
+                .unwrap_or(TemplateKey::Default);
+
+            let section_template = self
+                .templates
+                .section
+                .get(&template_name)
+                .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
+
+            let rendered = section_template(&section).render_to_string()?;
+
+            output_file.write_all(rendered.as_bytes())?;
+        }
+
         for page in &self.pages {
             let output_dir = self
                 .output_path
@@ -208,6 +253,7 @@ impl SiteBuilder<WithTemplates> {
             content_path: root_path.join("content"),
             output_path: root_path.join("public"),
             templates: self.state.templates,
+            sections: Vec::new(),
             pages: Vec::new(),
         }
     }

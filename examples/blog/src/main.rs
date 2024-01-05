@@ -1,5 +1,5 @@
 use anyhow::Result;
-use razorbill::content::Page;
+use razorbill::content::{Page, Section};
 use razorbill::markdown::{markdown, MarkdownComponents};
 use razorbill::{html::*, Site};
 
@@ -8,7 +8,12 @@ fn main() -> Result<()> {
         .root("examples/blog")
         .templates(
             || div(),
-            |_section| div(),
+            |section| {
+                crate::section(SectionProps {
+                    section,
+                    children: vec![],
+                })
+            },
             |page| {
                 crate::page(PageProps {
                     page,
@@ -66,6 +71,27 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                 ),
         )
         .children(props.children)
+}
+
+struct SectionProps<'a> {
+    pub section: &'a Section,
+    pub children: Vec<HtmlElement>,
+}
+
+fn section(SectionProps { section, children }: SectionProps) -> HtmlElement {
+    let title = section
+        .meta
+        .title
+        .clone()
+        .unwrap_or(section.path.to_string());
+
+    base_page(BasePageProps {
+        title: &title,
+        styles: vec![],
+        children: vec![body()
+            .child(h1().class("heading tc").content(&title))
+            .child(div().class("content").children(children))],
+    })
 }
 
 struct PageProps<'a> {
