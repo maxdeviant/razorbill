@@ -7,7 +7,7 @@ fn main() -> Result<()> {
     let mut site = Site::builder()
         .root("examples/blog")
         .templates(
-            || div(),
+            |section| index(IndexProps { section }),
             |section| crate::section(SectionProps { section }),
             |page| {
                 crate::page(PageProps {
@@ -66,6 +66,44 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                 ),
         )
         .children(props.children)
+}
+
+struct IndexProps<'a> {
+    pub section: &'a Section<'a>,
+}
+
+fn index(IndexProps { section }: IndexProps) -> HtmlElement {
+    let styles = r#"
+        body {
+            background-color: darkslategray;
+            color: #f4f4f4;
+        }
+
+        .heading {
+            font-size: 5rem;
+        }
+
+        .content {
+            max-width: 720px;
+            margin: auto;
+        }
+
+        a {
+            color: #fff;
+        }
+    "#;
+
+    base_page(BasePageProps {
+        title: "Razorbill",
+        styles: vec![styles],
+        children: vec![body()
+            .child(h1().class("heading tc").text_content("Razorbill"))
+            .child(
+                div()
+                    .class("content")
+                    .child(a().href("./posts/index.html").text_content("Posts")),
+            )],
+    })
 }
 
 struct SectionProps<'a> {

@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::content::{parse_front_matter, FileInfo};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SectionPath(pub(crate) String);
 
 impl fmt::Display for SectionPath {

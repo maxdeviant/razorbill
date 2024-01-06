@@ -7,7 +7,7 @@ use std::str::FromStr;
 use thiserror::Error;
 use walkdir::WalkDir;
 
-use crate::content::{Page, ParsePageError, ParseSectionError, Section};
+use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
 use crate::html::HtmlElement;
 use crate::render::{PageToRender, SectionToRender};
 
@@ -18,7 +18,7 @@ pub enum TemplateKey {
 }
 
 struct Templates {
-    pub index: Box<dyn Fn() -> HtmlElement>,
+    pub index: Box<dyn Fn(&SectionToRender) -> HtmlElement>,
     pub section: HashMap<TemplateKey, Box<dyn Fn(&SectionToRender) -> HtmlElement>>,
     pub page: HashMap<TemplateKey, Box<dyn Fn(&PageToRender) -> HtmlElement>>,
 }
@@ -129,18 +129,24 @@ impl Site {
             let output_path = output_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
 
-            let template_name = section
-                .meta
-                .template
-                .clone()
-                .map(TemplateKey::Custom)
-                .unwrap_or(TemplateKey::Default);
+            let section_template = if section.path == SectionPath("/_index".to_string()) {
+                &self.templates.index
+            } else {
+                let template_name = section
+                    .meta
+                    .template
+                    .clone()
+                    .map(TemplateKey::Custom)
+                    .unwrap_or(TemplateKey::Default);
 
-            let section_template = self
-                .templates
-                .section
-                .get(&template_name)
-                .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
+                let section_template = self
+                    .templates
+                    .section
+                    .get(&template_name)
+                    .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
+
+                section_template
+            };
 
             let pages = section
                 .pages
@@ -232,7 +238,7 @@ pub struct WithRootPath {
 impl SiteBuilder<WithRootPath> {
     pub fn templates(
         self,
-        index: impl Fn() -> HtmlElement + 'static,
+        index: impl Fn(&SectionToRender) -> HtmlElement + 'static,
         section: impl Fn(&SectionToRender) -> HtmlElement + 'static,
         page: impl Fn(&PageToRender) -> HtmlElement + 'static,
     ) -> SiteBuilder<WithTemplates> {
