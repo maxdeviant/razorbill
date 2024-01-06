@@ -176,6 +176,7 @@ impl Site {
 
             let ctx = RenderSectionContext {
                 content_path: &self.content_path,
+                sections: &self.sections,
                 pages: &self.pages,
                 section: SectionToRender::from_section(section, &self.pages),
             };

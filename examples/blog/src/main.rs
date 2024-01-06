@@ -123,15 +123,33 @@ fn index(IndexProps { ctx }: IndexProps) -> HtmlElement {
             .child(
                 div()
                     .class("content")
-                    .child(div().child(a().href("/posts/").text_content("Posts")))
-                    .child({
-                        let year_in_review = ctx.get_page("@/posts/year-in-review.md").unwrap();
+                    .child(
+                        div()
+                            .child(h2().text_content("Highlights"))
+                            .child(ul().child({
+                                let year_in_review =
+                                    ctx.get_page("@/posts/year-in-review.md").unwrap();
 
-                        div().child(
-                            a().href(year_in_review.path.to_string())
-                                .text_content(year_in_review.meta.title.as_ref().unwrap()),
-                        )
-                    }),
+                                li().child(
+                                    a().href(year_in_review.path.to_string())
+                                        .text_content(year_in_review.title.as_ref().unwrap()),
+                                )
+                            })),
+                    )
+                    .child(
+                        div()
+                            .child(h2().text_content("Posts"))
+                            .child(ul().children({
+                                let posts = ctx.get_section("@/posts/_index.md").unwrap();
+
+                                posts.pages.into_iter().map(|page| {
+                                    li().child(
+                                        a().href(page.path.to_string())
+                                            .text_content(page.title.as_ref().unwrap()),
+                                    )
+                                })
+                            })),
+                    ),
             )],
     })
 }

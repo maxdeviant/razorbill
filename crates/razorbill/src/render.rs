@@ -5,12 +5,13 @@ use crate::content::{Page, Section};
 
 pub struct RenderSectionContext<'a> {
     pub(crate) content_path: &'a Path,
+    pub(crate) sections: &'a HashMap<PathBuf, Section>,
     pub(crate) pages: &'a HashMap<PathBuf, Page>,
     pub section: SectionToRender<'a>,
 }
 
 impl<'a> RenderSectionContext<'a> {
-    pub fn get_page(&self, path: impl AsRef<Path>) -> Option<&'a Page> {
+    pub fn get_section(&self, path: impl AsRef<Path>) -> Option<SectionToRender<'a>> {
         let path = path.as_ref();
         let path = if path.starts_with("@/") {
             let mut new_path = self.content_path.to_owned();
@@ -27,7 +28,31 @@ impl<'a> RenderSectionContext<'a> {
             path.to_owned()
         };
 
-        self.pages.get(&path)
+        let section = self.sections.get(&path)?;
+
+        Some(SectionToRender::from_section(section, &self.pages))
+    }
+
+    pub fn get_page(&self, path: impl AsRef<Path>) -> Option<PageToRender<'a>> {
+        let path = path.as_ref();
+        let path = if path.starts_with("@/") {
+            let mut new_path = self.content_path.to_owned();
+
+            let mut components = path.components();
+            components.next();
+
+            for component in components {
+                new_path.push(component);
+            }
+
+            new_path
+        } else {
+            path.to_owned()
+        };
+
+        let page = self.pages.get(&path)?;
+
+        Some(PageToRender::from_page(page))
     }
 }
 
