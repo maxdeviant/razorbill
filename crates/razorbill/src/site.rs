@@ -255,31 +255,13 @@ impl Site {
                 section_template
             };
 
-            let pages = section
-                .pages
-                .iter()
-                .map(|page| self.pages.get(page).unwrap())
-                .map(|page| PageToRender {
-                    title: &page.meta.title,
-                    slug: &page.slug,
-                    path: &page.path.0,
-                    raw_content: &page.raw_content,
-                })
-                .collect::<Vec<_>>();
-
-            let section = SectionToRender {
-                title: &section.meta.title,
-                path: &section.path.0,
-                raw_content: &section.raw_content,
-                pages,
-            };
-
-            let rendered = section_template(&section).render_to_string()?;
+            let rendered = section_template(&SectionToRender::from_section(&section, &self.pages))
+                .render_to_string()?;
 
             SITE_CONTENT
                 .write()
                 .unwrap()
-                .insert(section.path.replace("/_index", "/"), rendered);
+                .insert(section.path.0.replace("/_index", "/"), rendered);
         }
 
         for page in self.pages.values() {
@@ -296,19 +278,12 @@ impl Site {
                 .get(&template_name)
                 .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
 
-            let page = PageToRender {
-                title: &page.meta.title,
-                slug: &page.slug,
-                path: &page.path.0,
-                raw_content: &page.raw_content,
-            };
-
-            let rendered = page_template(&page).render_to_string()?;
+            let rendered = page_template(&PageToRender::from_page(&page)).render_to_string()?;
 
             SITE_CONTENT
                 .write()
                 .unwrap()
-                .insert(page.path.to_owned(), rendered);
+                .insert(page.path.0.clone(), rendered);
         }
 
         Ok(())
