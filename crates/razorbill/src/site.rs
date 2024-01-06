@@ -12,9 +12,11 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{header, Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
+use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use thiserror::Error;
 use tokio::net::TcpListener;
+use tokio::sync::mpsc::unbounded_channel;
 use walkdir::WalkDir;
 
 use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
@@ -213,7 +215,7 @@ impl Site {
                 .boxed()
         }
 
-        async fn hello(
+        async fn handle_request(
             req: Request<hyper::body::Incoming>,
         ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Infallible> {
             match (req.method(), req.uri().path()) {
@@ -242,6 +244,39 @@ impl Site {
 
         self.render().unwrap();
 
+        let (watcher_tx, mut watcher_rx) = unbounded_channel();
+
+        let mut watcher = RecommendedWatcher::new(
+            move |result: Result<Event, notify::Error>| {
+                let event = result.unwrap();
+
+                watcher_tx.send(event).unwrap();
+            },
+            notify::Config::default(),
+        )
+        .unwrap();
+
+        watcher
+            .watch(&self.content_path, RecursiveMode::Recursive)
+            .unwrap();
+
+        tokio::task::spawn(async move {
+            use notify::EventKind;
+
+            loop {
+                let Some(event) = watcher_rx.recv().await else {
+                    continue;
+                };
+
+                match event.kind {
+                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                        dbg!(&event.paths);
+                    }
+                    _ => {}
+                }
+            }
+        });
+
         loop {
             let (stream, _) = listener.accept().await?;
 
@@ -249,7 +284,7 @@ impl Site {
 
             tokio::task::spawn(async move {
                 if let Err(err) = http1::Builder::new()
-                    .serve_connection(io, service_fn(hello))
+                    .serve_connection(io, service_fn(handle_request))
                     .await
                 {
                     eprintln!("Error serving connection: {err:?}");
