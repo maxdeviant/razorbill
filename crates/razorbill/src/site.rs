@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::io;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
+use std::{io, thread};
 
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
@@ -14,10 +14,12 @@ use hyper::{header, Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
+use serde_json::json;
 use thiserror::Error;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::unbounded_channel;
 use walkdir::WalkDir;
+use ws::{Message, Sender, WebSocket};
 
 use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
 use crate::html::HtmlElement;
@@ -203,6 +205,40 @@ impl Site {
 
         let listener = TcpListener::bind(addr).await?;
 
+        /// [v4.0.2](https://github.com/livereload/livereload-js/blob/v4.0.2/dist/livereload.min.js)
+        const LIVE_RELOAD_JS: &'static str = include_str!("../assets/livereload.min.js");
+
+        let live_reload_server = WebSocket::new(|output: Sender| {
+            move |message: Message| {
+                if message.into_text().unwrap().contains("\"hello\"") {
+                    let handshake_response = json!({
+                        "command": "hello",
+                        "protocols": ["http://livereload.com/protocols/official-7"],
+                        "serverName": "Razorbill"
+                    });
+
+                    return output.send(Message::text(
+                        serde_json::to_string(&handshake_response).unwrap(),
+                    ));
+                }
+
+                Ok(())
+            }
+        })
+        .unwrap();
+
+        let live_reload_broadcaster = live_reload_server.broadcaster();
+
+        let live_reload_address = "127.0.0.1:35729";
+
+        let live_reload_server = live_reload_server
+            .bind(&*live_reload_address)
+            .expect("failed to bind live reload server");
+
+        thread::spawn(move || {
+            live_reload_server.run().unwrap();
+        });
+
         fn empty() -> BoxBody<Bytes, hyper::Error> {
             Empty::<Bytes>::new()
                 .map_err(|never| match never {})
@@ -220,6 +256,14 @@ impl Site {
         ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Infallible> {
             match (req.method(), req.uri().path()) {
                 (&Method::GET, path) => {
+                    if path == "/livereload.js" {
+                        return Ok(Response::builder()
+                            .header(header::CONTENT_TYPE, "application/javascript")
+                            .status(StatusCode::OK)
+                            .body(full(LIVE_RELOAD_JS.to_owned()))
+                            .unwrap());
+                    }
+
                     if let Some(content) = SITE_CONTENT.read().unwrap().get(path) {
                         return Ok(Response::builder()
                             .header(header::CONTENT_TYPE, "text/html")
@@ -279,6 +323,19 @@ impl Site {
                         let mut site = site.write().unwrap();
                         site.load().unwrap();
                         site.render().unwrap();
+
+                        let reload_message = json!({
+                            "command": "reload",
+                            "path": "/",
+                            "originalPath": "",
+                            "liveCSS": true,
+                            "liveImg": true,
+                            "protocol": ["http://livereload.com/protocols/official-7"]
+                        });
+
+                        live_reload_broadcaster
+                            .send(serde_json::to_string(&reload_message).unwrap())
+                            .unwrap();
                     }
                     _ => {}
                 }

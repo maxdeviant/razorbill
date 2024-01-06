@@ -83,7 +83,8 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                         .styles
                         .into_iter()
                         .map(|styles| style().text_content(styles)),
-                ),
+                )
+                .child(script().src("/livereload.js?port=35729")),
         )
         .children(props.children)
 }

@@ -14,11 +14,13 @@ once_cell.workspace = true
 pulldown-cmark.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 toml.workspace = true
 url.workspace = true
 walkdir.workspace = true
+ws.workspace = true
 
 [dev-dependencies]
 indoc.workspace = true
