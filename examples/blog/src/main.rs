@@ -1,6 +1,6 @@
 use anyhow::Result;
-use razorbill::content::{Page, Section};
 use razorbill::markdown::{markdown, MarkdownComponents};
+use razorbill::render::{PageToRender as Page, SectionToRender as Section};
 use razorbill::{html::*, Site};
 
 fn main() -> Result<()> {
@@ -8,12 +8,7 @@ fn main() -> Result<()> {
         .root("examples/blog")
         .templates(
             || div(),
-            |section| {
-                crate::section(SectionProps {
-                    section,
-                    children: vec![],
-                })
-            },
+            |section| crate::section(SectionProps { section }),
             |page| {
                 crate::page(PageProps {
                     page,
@@ -74,28 +69,52 @@ fn base_page(props: BasePageProps) -> HtmlElement {
 }
 
 struct SectionProps<'a> {
-    pub section: &'a Section,
-    pub children: Vec<HtmlElement>,
+    pub section: &'a Section<'a>,
 }
 
-fn section(SectionProps { section, children }: SectionProps) -> HtmlElement {
-    let title = section
-        .meta
-        .title
-        .clone()
-        .unwrap_or(section.path.to_string());
+fn section(SectionProps { section }: SectionProps) -> HtmlElement {
+    let styles = r#"
+        body {
+            background-color: darkslategray;
+            color: #f4f4f4;
+        }
+
+        .heading {
+            font-size: 5rem;
+        }
+
+        .content {
+            max-width: 720px;
+            margin: auto;
+        }
+
+        a {
+            color: #fff;
+        }
+    "#;
+
+    let title = section.title.clone().unwrap_or(section.path.to_string());
 
     base_page(BasePageProps {
         title: &title,
-        styles: vec![],
+        styles: vec![styles],
         children: vec![body()
             .child(h1().class("heading tc").content(&title))
-            .child(div().class("content").children(children))],
+            .child(
+                div()
+                    .class("content")
+                    .children(section.pages.iter().map(|page| {
+                        li().child(
+                            a().href(format!("..{}/index.html", page.path))
+                                .content(page.title.clone().unwrap_or_default()),
+                        )
+                    })),
+            )],
     })
 }
 
 struct PageProps<'a> {
-    pub page: &'a Page,
+    pub page: &'a Page<'a>,
     pub children: Vec<HtmlElement>,
 }
 
@@ -122,7 +141,11 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
     "#;
 
     base_page(BasePageProps {
-        title: page.meta.title.as_ref().unwrap_or(&page.slug),
+        title: page
+            .title
+            .as_ref()
+            .map(|title| title.as_str())
+            .unwrap_or(page.slug),
         styles: vec![styles],
         children: vec![body()
             .child(h1().class("heading tc").content("Razorbill Blog"))
@@ -132,7 +155,7 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
 }
 
 struct ProseProps<'a> {
-    pub page: &'a Page,
+    pub page: &'a Page<'a>,
     pub children: Vec<HtmlElement>,
 }
 
@@ -159,7 +182,11 @@ fn prose(ProseProps { page, children }: ProseProps) -> HtmlElement {
     "#;
 
     base_page(BasePageProps {
-        title: page.meta.title.as_ref().unwrap_or(&page.slug),
+        title: page
+            .title
+            .as_ref()
+            .map(|title| title.as_str())
+            .unwrap_or(page.slug),
         styles: vec![styles],
         children: vec![body()
             .child(h1().class("heading tc").content("Razorbill Blog"))

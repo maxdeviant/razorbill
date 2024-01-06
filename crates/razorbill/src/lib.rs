@@ -1,6 +1,7 @@
 pub mod content;
 pub mod html;
 pub mod markdown;
+pub mod render;
 mod site;
 
 pub use site::*;

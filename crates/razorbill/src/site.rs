@@ -9,6 +9,7 @@ use walkdir::WalkDir;
 
 use crate::content::{Page, ParsePageError, ParseSectionError, Section};
 use crate::html::HtmlElement;
+use crate::render::{PageToRender, SectionToRender};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum TemplateKey {
@@ -18,8 +19,8 @@ pub enum TemplateKey {
 
 struct Templates {
     pub index: Box<dyn Fn() -> HtmlElement>,
-    pub section: HashMap<TemplateKey, Box<dyn Fn(&Section) -> HtmlElement>>,
-    pub page: HashMap<TemplateKey, Box<dyn Fn(&Page) -> HtmlElement>>,
+    pub section: HashMap<TemplateKey, Box<dyn Fn(&SectionToRender) -> HtmlElement>>,
+    pub page: HashMap<TemplateKey, Box<dyn Fn(&PageToRender) -> HtmlElement>>,
 }
 
 #[derive(Error, Debug)]
@@ -141,6 +142,25 @@ impl Site {
                 .get(&template_name)
                 .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
 
+            let pages = section
+                .pages
+                .iter()
+                .map(|page| self.pages.get(page).unwrap())
+                .map(|page| PageToRender {
+                    title: &page.meta.title,
+                    slug: &page.slug,
+                    path: &page.path.0,
+                    raw_content: &page.raw_content,
+                })
+                .collect::<Vec<_>>();
+
+            let section = SectionToRender {
+                title: &section.meta.title,
+                path: &section.path.0,
+                raw_content: &section.raw_content,
+                pages,
+            };
+
             let rendered = section_template(&section).render_to_string()?;
 
             output_file.write_all(rendered.as_bytes())?;
@@ -169,7 +189,14 @@ impl Site {
                 .get(&template_name)
                 .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
 
-            let rendered = page_template(page).render_to_string()?;
+            let page = PageToRender {
+                title: &page.meta.title,
+                slug: &page.slug,
+                path: &page.path.0,
+                raw_content: &page.raw_content,
+            };
+
+            let rendered = page_template(&page).render_to_string()?;
 
             output_file.write_all(rendered.as_bytes())?;
 
@@ -206,8 +233,8 @@ impl SiteBuilder<WithRootPath> {
     pub fn templates(
         self,
         index: impl Fn() -> HtmlElement + 'static,
-        section: impl Fn(&Section) -> HtmlElement + 'static,
-        page: impl Fn(&Page) -> HtmlElement + 'static,
+        section: impl Fn(&SectionToRender) -> HtmlElement + 'static,
+        page: impl Fn(&PageToRender) -> HtmlElement + 'static,
     ) -> SiteBuilder<WithTemplates> {
         SiteBuilder {
             state: WithTemplates {
@@ -216,11 +243,11 @@ impl SiteBuilder<WithRootPath> {
                     index: Box::new(index),
                     section: HashMap::from_iter([(
                         TemplateKey::Default,
-                        Box::new(section) as Box<dyn Fn(&Section) -> HtmlElement>,
+                        Box::new(section) as Box<dyn Fn(&SectionToRender) -> HtmlElement>,
                     )]),
                     page: HashMap::from_iter([(
                         TemplateKey::Default,
-                        Box::new(page) as Box<dyn Fn(&Page) -> HtmlElement>,
+                        Box::new(page) as Box<dyn Fn(&PageToRender) -> HtmlElement>,
                     )]),
                 },
             },
@@ -237,7 +264,7 @@ impl SiteBuilder<WithTemplates> {
     pub fn add_section_template(
         mut self,
         name: impl Into<String>,
-        template: impl Fn(&Section) -> HtmlElement + 'static,
+        template: impl Fn(&SectionToRender) -> HtmlElement + 'static,
     ) -> Self {
         self.state
             .templates
@@ -249,7 +276,7 @@ impl SiteBuilder<WithTemplates> {
     pub fn add_page_template(
         mut self,
         name: impl Into<String>,
-        template: impl Fn(&Page) -> HtmlElement + 'static,
+        template: impl Fn(&PageToRender) -> HtmlElement + 'static,
     ) -> Self {
         self.state
             .templates
