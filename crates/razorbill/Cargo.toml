@@ -5,11 +5,15 @@ edition = "2021"
 
 [dependencies]
 grass.workspace = true
+http-body-util.workspace = true
+hyper = { workspace = true, features = ["full"] }
+hyper-util = { workspace = true, features = ["full"] }
 indexmap.workspace = true
 pulldown-cmark.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
 thiserror.workspace = true
+tokio = { workspace = true, features = ["full"] }
 toml.workspace = true
 url.workspace = true
 walkdir.workspace = true

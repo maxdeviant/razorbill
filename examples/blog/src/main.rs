@@ -16,7 +16,8 @@ enum Command {
     Serve,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let mut site = Site::builder()
@@ -47,7 +48,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Command::Build => site.render()?,
-        Command::Serve => todo!("Implement serve command"),
+        Command::Serve => site.serve().await?,
     }
 
     Ok(())
