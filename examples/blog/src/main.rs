@@ -1,9 +1,24 @@
 use anyhow::Result;
+use clap::{Parser, Subcommand};
 use razorbill::markdown::{markdown, MarkdownComponents};
 use razorbill::render::{PageToRender as Page, SectionToRender as Section};
 use razorbill::{html::*, Site};
 
+#[derive(Parser)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Build,
+    Serve,
+}
+
 fn main() -> Result<()> {
+    let cli = Cli::parse();
+
     let mut site = Site::builder()
         .root("examples/blog")
         .templates(
@@ -29,7 +44,11 @@ fn main() -> Result<()> {
         .build();
 
     site.load()?;
-    site.render()?;
+
+    match cli.command {
+        Command::Build => site.render()?,
+        Command::Serve => todo!("Implement serve command"),
+    }
 
     Ok(())
 }

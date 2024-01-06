@@ -6,4 +6,5 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+clap = { workspace = true, features = ["derive"] }
 razorbill.workspace = true
