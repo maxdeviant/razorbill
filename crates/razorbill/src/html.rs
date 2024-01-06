@@ -110,8 +110,8 @@ macro_rules! create_attribute_methods {
 
 impl HtmlElement {
     create_attribute_methods!(
-        charset, class, defer, href, id, lang, name, rel, role, src, start, style, tabindex, title,
-        translate
+        charset, class, content, defer, href, id, lang, name, rel, role, src, start, style,
+        tabindex, title, translate
     );
 
     pub fn async_<V>(self, value: impl Into<Option<V>>) -> Self
@@ -119,13 +119,6 @@ impl HtmlElement {
         V: Into<String>,
     {
         self.attr("async", value)
-    }
-
-    pub fn content_<V>(self, value: impl Into<Option<V>>) -> Self
-    where
-        V: Into<String>,
-    {
-        self.attr("content", value)
     }
 
     pub fn http_equiv<V>(self, value: impl Into<Option<V>>) -> Self

@@ -46,11 +46,11 @@ fn base_page(props: BasePageProps) -> HtmlElement {
         .child(
             head()
                 .child(meta().charset("utf-8"))
-                .child(meta().http_equiv("x-ua-compatible").content_("ie=edge"))
+                .child(meta().http_equiv("x-ua-compatible").content("ie=edge"))
                 .child(
                     meta()
                         .name("viewport")
-                        .content_("width=device-width, initial-scale=1.0, maximum-scale=1"),
+                        .content("width=device-width, initial-scale=1.0, maximum-scale=1"),
                 )
                 .child(title().text_content(props.title))
                 .child(
