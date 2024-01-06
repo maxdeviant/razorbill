@@ -123,7 +123,15 @@ fn index(IndexProps { ctx }: IndexProps) -> HtmlElement {
             .child(
                 div()
                     .class("content")
-                    .child(a().href("/posts/").text_content("Posts")),
+                    .child(div().child(a().href("/posts/").text_content("Posts")))
+                    .child({
+                        let year_in_review = ctx.get_page("@/posts/year-in-review.md").unwrap();
+
+                        div().child(
+                            a().href(year_in_review.path.to_string())
+                                .text_content(year_in_review.meta.title.as_ref().unwrap()),
+                        )
+                    }),
             )],
     })
 }

@@ -1,10 +1,34 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::content::{Page, Section};
 
 pub struct RenderSectionContext<'a> {
+    pub(crate) content_path: &'a Path,
+    pub(crate) pages: &'a HashMap<PathBuf, Page>,
     pub section: SectionToRender<'a>,
+}
+
+impl<'a> RenderSectionContext<'a> {
+    pub fn get_page(&self, path: impl AsRef<Path>) -> Option<&'a Page> {
+        let path = path.as_ref();
+        let path = if path.starts_with("@/") {
+            let mut new_path = self.content_path.to_owned();
+
+            let mut components = path.components();
+            components.next();
+
+            for component in components {
+                new_path.push(component);
+            }
+
+            new_path
+        } else {
+            path.to_owned()
+        };
+
+        self.pages.get(&path)
+    }
 }
 
 pub struct SectionToRender<'a> {
