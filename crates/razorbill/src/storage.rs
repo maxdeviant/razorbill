@@ -78,9 +78,18 @@ impl Store for DiskStorage {
     }
 
     fn store_css(&self, path: &Path, css: String) -> Result<(), Self::Error> {
+        let mut output_dir = self.output_path.to_owned();
+
         if let Some(parent) = path.parent() {
-            println!("mkdir {parent:?}");
+            output_dir.push(parent);
         }
+
+        fs::create_dir_all(&output_dir)?;
+
+        let output_path = output_dir.join(path);
+        let mut output_file = File::create(&output_path)?;
+
+        output_file.write_all(css.as_bytes())?;
 
         Ok(())
     }
