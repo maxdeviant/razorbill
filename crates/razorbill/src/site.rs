@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::{io, thread};
 
+use auk::HtmlElement;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
 use hyper::body::Bytes;
@@ -22,7 +23,6 @@ use walkdir::WalkDir;
 use ws::{Message, Sender, WebSocket};
 
 use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
-use crate::html::HtmlElement;
 use crate::render::{PageToRender, SectionToRender};
 use crate::storage::{DiskStorage, InMemoryStorage, Store};
 

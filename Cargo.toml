@@ -4,6 +4,7 @@ members = ["crates/*", "examples/*"]
 
 [workspace.dependencies]
 anyhow = "1.0.78"
+auk = { path = "crates/auk" }
 clap = "4.4.13"
 grass = "0.13.1"
 http-body-util = "0.1.0"

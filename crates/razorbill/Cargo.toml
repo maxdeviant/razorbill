@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+auk.workspace = true
 grass.workspace = true
 http-body-util.workspace = true
 hyper = { workspace = true, features = ["full"] }

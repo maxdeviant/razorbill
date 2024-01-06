@@ -1,5 +1,4 @@
 pub mod content;
-pub mod html;
 pub mod markdown;
 pub mod render;
 mod site;
@@ -9,9 +8,9 @@ pub use site::*;
 
 #[cfg(test)]
 mod tests {
+    use auk::*;
     use indoc::indoc;
 
-    use super::html::*;
     use super::markdown::*;
 
     #[test]

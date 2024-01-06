@@ -1,8 +1,7 @@
 use std::collections::VecDeque;
 
+use auk::HtmlElement;
 use pulldown_cmark::{self as md, Alignment, CodeBlockKind, Event, HeadingLevel, LinkType, Tag};
-
-use crate::html::HtmlElement;
 
 pub struct MarkdownComponents {
     pub p: Box<dyn Fn() -> HtmlElement>,
@@ -161,7 +160,7 @@ impl MarkdownComponents {
 
 impl Default for MarkdownComponents {
     fn default() -> Self {
-        use crate::html::*;
+        use auk::*;
 
         Self {
             p: Box::new(p),

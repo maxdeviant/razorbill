@@ -92,6 +92,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca87830a3e3fb156dc96cfbd31cb620265dd053be734723f22b760d6cc3c3051"
 
 [[package]]
+name = "auk"
+version = "0.1.0"
+dependencies = [
+ "indexmap 2.1.0",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -150,6 +157,7 @@ name = "blog"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "auk",
  "clap",
  "razorbill",
  "tokio",
@@ -1086,6 +1094,7 @@ dependencies = [
 name = "razorbill"
 version = "0.1.0"
 dependencies = [
+ "auk",
  "grass",
  "http-body-util",
  "hyper",

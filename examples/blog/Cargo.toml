@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+auk.workspace = true
 clap = { workspace = true, features = ["derive"] }
 razorbill.workspace = true
 tokio = { workspace = true, features = ["full"] }
