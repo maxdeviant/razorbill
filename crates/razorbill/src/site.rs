@@ -31,9 +31,9 @@ pub enum TemplateKey {
 }
 
 struct Templates {
-    pub index: Box<dyn Fn(&SectionToRender) -> HtmlElement>,
-    pub section: HashMap<TemplateKey, Box<dyn Fn(&SectionToRender) -> HtmlElement>>,
-    pub page: HashMap<TemplateKey, Box<dyn Fn(&PageToRender) -> HtmlElement>>,
+    pub index: Arc<dyn Fn(&SectionToRender) -> HtmlElement + Send + Sync>,
+    pub section: HashMap<TemplateKey, Arc<dyn Fn(&SectionToRender) -> HtmlElement + Send + Sync>>,
+    pub page: HashMap<TemplateKey, Arc<dyn Fn(&PageToRender) -> HtmlElement + Send + Sync>>,
 }
 
 #[derive(Error, Debug)]
@@ -198,7 +198,7 @@ impl Site {
         Ok(())
     }
 
-    pub async fn serve(&mut self) -> Result<(), ServeSiteError> {
+    pub async fn serve(self) -> Result<(), ServeSiteError> {
         let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
         let listener = TcpListener::bind(addr).await?;
@@ -240,9 +240,13 @@ impl Site {
             }
         }
 
-        self.is_serving = true;
+        let site = Arc::new(RwLock::new(self));
 
-        self.render().unwrap();
+        {
+            let mut site = site.write().unwrap();
+            site.is_serving = true;
+            site.render().unwrap();
+        }
 
         let (watcher_tx, mut watcher_rx) = unbounded_channel();
 
@@ -257,7 +261,7 @@ impl Site {
         .unwrap();
 
         watcher
-            .watch(&self.content_path, RecursiveMode::Recursive)
+            .watch(&site.read().unwrap().content_path, RecursiveMode::Recursive)
             .unwrap();
 
         tokio::task::spawn(async move {
@@ -271,6 +275,10 @@ impl Site {
                 match event.kind {
                     EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
                         dbg!(&event.paths);
+
+                        let mut site = site.write().unwrap();
+                        site.load().unwrap();
+                        site.render().unwrap();
                     }
                     _ => {}
                 }
@@ -319,22 +327,23 @@ pub struct WithRootPath {
 impl SiteBuilder<WithRootPath> {
     pub fn templates(
         self,
-        index: impl Fn(&SectionToRender) -> HtmlElement + 'static,
-        section: impl Fn(&SectionToRender) -> HtmlElement + 'static,
-        page: impl Fn(&PageToRender) -> HtmlElement + 'static,
+        index: impl Fn(&SectionToRender) -> HtmlElement + Send + Sync + 'static,
+        section: impl Fn(&SectionToRender) -> HtmlElement + Send + Sync + 'static,
+        page: impl Fn(&PageToRender) -> HtmlElement + Send + Sync + 'static,
     ) -> SiteBuilder<WithTemplates> {
         SiteBuilder {
             state: WithTemplates {
                 root_path: self.state.root_path,
                 templates: Templates {
-                    index: Box::new(index),
+                    index: Arc::new(index),
                     section: HashMap::from_iter([(
                         TemplateKey::Default,
-                        Box::new(section) as Box<dyn Fn(&SectionToRender) -> HtmlElement>,
+                        Arc::new(section)
+                            as Arc<dyn Fn(&SectionToRender) -> HtmlElement + Send + Sync>,
                     )]),
                     page: HashMap::from_iter([(
                         TemplateKey::Default,
-                        Box::new(page) as Box<dyn Fn(&PageToRender) -> HtmlElement>,
+                        Arc::new(page) as Arc<dyn Fn(&PageToRender) -> HtmlElement + Send + Sync>,
                     )]),
                 },
             },
@@ -351,24 +360,24 @@ impl SiteBuilder<WithTemplates> {
     pub fn add_section_template(
         mut self,
         name: impl Into<String>,
-        template: impl Fn(&SectionToRender) -> HtmlElement + 'static,
+        template: impl Fn(&SectionToRender) -> HtmlElement + Send + Sync + 'static,
     ) -> Self {
         self.state
             .templates
             .section
-            .insert(TemplateKey::Custom(name.into()), Box::new(template));
+            .insert(TemplateKey::Custom(name.into()), Arc::new(template));
         self
     }
 
     pub fn add_page_template(
         mut self,
         name: impl Into<String>,
-        template: impl Fn(&PageToRender) -> HtmlElement + 'static,
+        template: impl Fn(&PageToRender) -> HtmlElement + Send + Sync + 'static,
     ) -> Self {
         self.state
             .templates
             .page
-            .insert(TemplateKey::Custom(name.into()), Box::new(template));
+            .insert(TemplateKey::Custom(name.into()), Arc::new(template));
         self
     }
 
