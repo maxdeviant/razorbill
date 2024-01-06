@@ -2,7 +2,7 @@ use anyhow::Result;
 use auk::*;
 use clap::{Parser, Subcommand};
 use razorbill::markdown::{markdown, MarkdownComponents};
-use razorbill::render::{RenderPageContext, RenderSectionContext};
+use razorbill::render::{PageToRender, RenderPageContext, RenderSectionContext};
 use razorbill::Site;
 
 #[derive(Parser)]
@@ -123,35 +123,32 @@ fn index(IndexProps { ctx }: IndexProps) -> HtmlElement {
             .child(
                 div()
                     .class("content")
-                    .child(
-                        div()
-                            .child(h2().text_content("Highlights"))
-                            .child(ul().child({
-                                let year_in_review =
-                                    ctx.get_page("@/posts/year-in-review.md").unwrap();
-
-                                li().child(
-                                    a().href(year_in_review.path.to_string())
-                                        .text_content(year_in_review.title.as_ref().unwrap()),
-                                )
-                            })),
-                    )
-                    .child(
-                        div()
-                            .child(h2().text_content("Posts"))
-                            .child(ul().children({
-                                let posts = ctx.get_section("@/posts/_index.md").unwrap();
-
-                                posts.pages.into_iter().map(|page| {
-                                    li().child(
-                                        a().href(page.path.to_string())
-                                            .text_content(page.title.as_ref().unwrap()),
-                                    )
-                                })
-                            })),
-                    ),
+                    .child(page_list(PageListProps {
+                        heading: "Highlights",
+                        pages: vec![ctx.get_page("@/posts/year-in-review.md").unwrap()],
+                    }))
+                    .child(page_list(PageListProps {
+                        heading: "Posts",
+                        pages: ctx.get_section("@/posts/_index.md").unwrap().pages,
+                    })),
             )],
     })
+}
+
+struct PageListProps<'a> {
+    pub heading: &'a str,
+    pub pages: Vec<PageToRender<'a>>,
+}
+
+fn page_list(PageListProps { heading, pages }: PageListProps) -> HtmlElement {
+    div()
+        .child(h2().text_content(heading))
+        .child(ul().children(pages.into_iter().map(|page| {
+            li().child(
+                a().href(page.path.to_string())
+                    .text_content(page.title.as_ref().unwrap()),
+            )
+        })))
 }
 
 struct SectionProps<'a> {
