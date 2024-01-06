@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use auk::HtmlElement;
+use auk::{HtmlElement, WithChildren};
 use pulldown_cmark::{self as md, Alignment, CodeBlockKind, Event, HeadingLevel, LinkType, Tag};
 
 pub struct MarkdownComponents {
@@ -250,7 +250,7 @@ where
                 }
                 Event::Text(text) => {
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
-                        element.content = Some(text.to_string());
+                        element.text_content_mut().replace(text.to_string());
                     }
                 }
                 Event::Code(text) => {
@@ -275,7 +275,7 @@ where
     fn pop(&mut self) {
         if let Some(element) = self.current_element_stack.pop_back() {
             if let Some(parent) = self.current_element_stack.back_mut() {
-                parent.children.push(element);
+                parent.children_mut().push(element);
             } else {
                 self.elements.push(element);
             }
