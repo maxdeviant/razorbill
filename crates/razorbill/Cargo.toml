@@ -9,6 +9,7 @@ http-body-util.workspace = true
 hyper = { workspace = true, features = ["full"] }
 hyper-util = { workspace = true, features = ["full"] }
 indexmap.workspace = true
+once_cell.workspace = true
 pulldown-cmark.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }

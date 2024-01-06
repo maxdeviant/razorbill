@@ -5,13 +5,16 @@ use std::io::{self, Write};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::{Arc, RwLock};
 
-use http_body_util::Full;
+use http_body_util::combinators::BoxBody;
+use http_body_util::{BodyExt, Empty, Full};
 use hyper::body::Bytes;
-use hyper::server::conn::{http1, http2};
+use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Request, Response};
+use hyper::{header, Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
+use once_cell::sync::Lazy;
 use thiserror::Error;
 use tokio::net::TcpListener;
 use walkdir::WalkDir;
@@ -62,6 +65,9 @@ pub enum ServeSiteError {
     AsyncIo(#[from] tokio::io::Error),
 }
 
+static SITE_CONTENT: Lazy<Arc<RwLock<HashMap<String, String>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
+
 pub struct Site {
     root_path: PathBuf,
     content_path: PathBuf,
@@ -69,6 +75,7 @@ pub struct Site {
     templates: Templates,
     sections: HashMap<PathBuf, Section>,
     pages: HashMap<PathBuf, Page>,
+    is_serving: bool,
 }
 
 impl Site {
@@ -227,16 +234,131 @@ impl Site {
         Ok(())
     }
 
+    fn render_in_memory(&mut self) -> Result<(), RenderSiteError> {
+        for section in self.sections.values() {
+            let section_template = if section.path == SectionPath("/_index".to_string()) {
+                &self.templates.index
+            } else {
+                let template_name = section
+                    .meta
+                    .template
+                    .clone()
+                    .map(TemplateKey::Custom)
+                    .unwrap_or(TemplateKey::Default);
+
+                let section_template = self
+                    .templates
+                    .section
+                    .get(&template_name)
+                    .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
+
+                section_template
+            };
+
+            let pages = section
+                .pages
+                .iter()
+                .map(|page| self.pages.get(page).unwrap())
+                .map(|page| PageToRender {
+                    title: &page.meta.title,
+                    slug: &page.slug,
+                    path: &page.path.0,
+                    raw_content: &page.raw_content,
+                })
+                .collect::<Vec<_>>();
+
+            let section = SectionToRender {
+                title: &section.meta.title,
+                path: &section.path.0,
+                raw_content: &section.raw_content,
+                pages,
+            };
+
+            let rendered = section_template(&section).render_to_string()?;
+
+            SITE_CONTENT
+                .write()
+                .unwrap()
+                .insert(section.path.replace("/_index", "/"), rendered);
+        }
+
+        for page in self.pages.values() {
+            let template_name = page
+                .meta
+                .template
+                .clone()
+                .map(TemplateKey::Custom)
+                .unwrap_or(TemplateKey::Default);
+
+            let page_template = self
+                .templates
+                .page
+                .get(&template_name)
+                .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
+
+            let page = PageToRender {
+                title: &page.meta.title,
+                slug: &page.slug,
+                path: &page.path.0,
+                raw_content: &page.raw_content,
+            };
+
+            let rendered = page_template(&page).render_to_string()?;
+
+            SITE_CONTENT
+                .write()
+                .unwrap()
+                .insert(page.path.to_owned(), rendered);
+        }
+
+        Ok(())
+    }
+
     pub async fn serve(&mut self) -> Result<(), ServeSiteError> {
         let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
         let listener = TcpListener::bind(addr).await?;
 
-        async fn hello(
-            _: Request<hyper::body::Incoming>,
-        ) -> Result<Response<Full<Bytes>>, Infallible> {
-            Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
+        fn empty() -> BoxBody<Bytes, hyper::Error> {
+            Empty::<Bytes>::new()
+                .map_err(|never| match never {})
+                .boxed()
         }
+
+        fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
+            Full::new(chunk.into())
+                .map_err(|never| match never {})
+                .boxed()
+        }
+
+        async fn hello(
+            req: Request<hyper::body::Incoming>,
+        ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Infallible> {
+            match (req.method(), req.uri().path()) {
+                (&Method::GET, path) => {
+                    if let Some(content) = SITE_CONTENT.read().unwrap().get(path) {
+                        return Ok(Response::builder()
+                            .header(header::CONTENT_TYPE, "text/html")
+                            .status(StatusCode::OK)
+                            .body(full(content.to_owned()))
+                            .unwrap());
+                    }
+
+                    let mut not_found = Response::new(empty());
+                    *not_found.status_mut() = StatusCode::NOT_FOUND;
+                    Ok(not_found)
+                }
+                _ => {
+                    let mut not_found = Response::new(empty());
+                    *not_found.status_mut() = StatusCode::NOT_FOUND;
+                    Ok(not_found)
+                }
+            }
+        }
+
+        self.is_serving = true;
+
+        self.render_in_memory().unwrap();
 
         loop {
             let (stream, _) = listener.accept().await?;
@@ -343,6 +465,7 @@ impl SiteBuilder<WithTemplates> {
             templates: self.state.templates,
             sections: HashMap::new(),
             pages: HashMap::new(),
+            is_serving: false,
         }
     }
 }

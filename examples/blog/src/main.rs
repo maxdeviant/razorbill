@@ -121,7 +121,7 @@ fn index(IndexProps { section }: IndexProps) -> HtmlElement {
             .child(
                 div()
                     .class("content")
-                    .child(a().href("./posts/index.html").text_content("Posts")),
+                    .child(a().href("/posts/").text_content("Posts")),
             )],
     })
 }
@@ -163,7 +163,7 @@ fn section(SectionProps { section }: SectionProps) -> HtmlElement {
                     .class("content")
                     .children(section.pages.iter().map(|page| {
                         li().child(
-                            a().href(format!("..{}/index.html", page.path))
+                            a().href(page.path)
                                 .text_content(page.title.clone().unwrap_or_default()),
                         )
                     })),

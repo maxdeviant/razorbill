@@ -760,6 +760,7 @@ dependencies = [
  "hyper-util",
  "indexmap 2.1.0",
  "indoc",
+ "once_cell",
  "pulldown-cmark",
  "regex",
  "serde",
