@@ -23,7 +23,7 @@ use walkdir::WalkDir;
 use ws::{Message, Sender, WebSocket};
 
 use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
-use crate::render::{PageToRender, SectionToRender};
+use crate::render::{PageToRender, RenderPageContext, RenderSectionContext, SectionToRender};
 use crate::storage::{DiskStorage, InMemoryStorage, Store};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -32,10 +32,16 @@ pub enum TemplateKey {
     Custom(String),
 }
 
+pub type RenderIndex = Arc<dyn Fn(&RenderSectionContext) -> HtmlElement + Send + Sync>;
+
+pub type RenderSection = Arc<dyn Fn(&RenderSectionContext) -> HtmlElement + Send + Sync>;
+
+pub type RenderPage = Arc<dyn Fn(&RenderPageContext) -> HtmlElement + Send + Sync>;
+
 struct Templates {
-    pub index: Arc<dyn Fn(&SectionToRender) -> HtmlElement + Send + Sync>,
-    pub section: HashMap<TemplateKey, Arc<dyn Fn(&SectionToRender) -> HtmlElement + Send + Sync>>,
-    pub page: HashMap<TemplateKey, Arc<dyn Fn(&PageToRender) -> HtmlElement + Send + Sync>>,
+    pub index: RenderIndex,
+    pub section: HashMap<TemplateKey, RenderSection>,
+    pub page: HashMap<TemplateKey, RenderPage>,
 }
 
 #[derive(Error, Debug)]
@@ -168,8 +174,11 @@ impl Site {
                 section_template
             };
 
-            let rendered = section_template(&SectionToRender::from_section(section, &self.pages))
-                .render_to_string()?;
+            let ctx = RenderSectionContext {
+                section: SectionToRender::from_section(section, &self.pages),
+            };
+
+            let rendered = section_template(&ctx).render_to_string()?;
 
             storage
                 .store_rendered_section(&section, rendered)
@@ -190,7 +199,11 @@ impl Site {
                 .get(&template_name)
                 .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
 
-            let rendered = page_template(&PageToRender::from_page(page)).render_to_string()?;
+            let ctx = RenderPageContext {
+                page: PageToRender::from_page(page),
+            };
+
+            let rendered = page_template(&ctx).render_to_string()?;
 
             storage
                 .store_rendered_page(&page, rendered)
@@ -384,9 +397,9 @@ pub struct WithRootPath {
 impl SiteBuilder<WithRootPath> {
     pub fn templates(
         self,
-        index: impl Fn(&SectionToRender) -> HtmlElement + Send + Sync + 'static,
-        section: impl Fn(&SectionToRender) -> HtmlElement + Send + Sync + 'static,
-        page: impl Fn(&PageToRender) -> HtmlElement + Send + Sync + 'static,
+        index: impl Fn(&RenderSectionContext) -> HtmlElement + Send + Sync + 'static,
+        section: impl Fn(&RenderSectionContext) -> HtmlElement + Send + Sync + 'static,
+        page: impl Fn(&RenderPageContext) -> HtmlElement + Send + Sync + 'static,
     ) -> SiteBuilder<WithTemplates> {
         SiteBuilder {
             state: WithTemplates {
@@ -395,12 +408,11 @@ impl SiteBuilder<WithRootPath> {
                     index: Arc::new(index),
                     section: HashMap::from_iter([(
                         TemplateKey::Default,
-                        Arc::new(section)
-                            as Arc<dyn Fn(&SectionToRender) -> HtmlElement + Send + Sync>,
+                        Arc::new(section) as RenderSection,
                     )]),
                     page: HashMap::from_iter([(
                         TemplateKey::Default,
-                        Arc::new(page) as Arc<dyn Fn(&PageToRender) -> HtmlElement + Send + Sync>,
+                        Arc::new(page) as RenderPage,
                     )]),
                 },
             },
@@ -417,7 +429,7 @@ impl SiteBuilder<WithTemplates> {
     pub fn add_section_template(
         mut self,
         name: impl Into<String>,
-        template: impl Fn(&SectionToRender) -> HtmlElement + Send + Sync + 'static,
+        template: impl Fn(&RenderSectionContext) -> HtmlElement + Send + Sync + 'static,
     ) -> Self {
         self.state
             .templates
@@ -429,7 +441,7 @@ impl SiteBuilder<WithTemplates> {
     pub fn add_page_template(
         mut self,
         name: impl Into<String>,
-        template: impl Fn(&PageToRender) -> HtmlElement + Send + Sync + 'static,
+        template: impl Fn(&RenderPageContext) -> HtmlElement + Send + Sync + 'static,
     ) -> Self {
         self.state
             .templates

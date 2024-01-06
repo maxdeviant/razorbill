@@ -3,6 +3,10 @@ use std::path::PathBuf;
 
 use crate::content::{Page, Section};
 
+pub struct RenderSectionContext<'a> {
+    pub section: SectionToRender<'a>,
+}
+
 pub struct SectionToRender<'a> {
     pub title: &'a Option<String>,
     pub path: &'a str,
@@ -26,6 +30,10 @@ impl<'a> SectionToRender<'a> {
             pages,
         }
     }
+}
+
+pub struct RenderPageContext<'a> {
+    pub page: PageToRender<'a>,
 }
 
 pub struct PageToRender<'a> {

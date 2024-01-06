@@ -2,7 +2,7 @@ use anyhow::Result;
 use auk::*;
 use clap::{Parser, Subcommand};
 use razorbill::markdown::{markdown, MarkdownComponents};
-use razorbill::render::{PageToRender as Page, SectionToRender as Section};
+use razorbill::render::{RenderPageContext, RenderSectionContext};
 use razorbill::Site;
 
 #[derive(Parser)]
@@ -24,22 +24,22 @@ async fn main() -> Result<()> {
     let mut site = Site::builder()
         .root("examples/blog")
         .templates(
-            |section| index(IndexProps { section }),
-            |section| crate::section(SectionProps { section }),
-            |page| {
-                crate::page(PageProps {
-                    page,
+            |ctx| index(IndexProps { ctx }),
+            |ctx| section(SectionProps { ctx }),
+            |ctx| {
+                page(PageProps {
+                    ctx,
                     children: vec![post(PostProps {
-                        text: &page.raw_content,
+                        text: &ctx.page.raw_content,
                     })],
                 })
             },
         )
-        .add_page_template("prose", |page| {
+        .add_page_template("prose", |ctx| {
             prose(ProseProps {
-                page,
+                ctx,
                 children: vec![post(PostProps {
-                    text: &page.raw_content,
+                    text: &ctx.page.raw_content,
                 })],
             })
         })
@@ -91,10 +91,10 @@ fn base_page(props: BasePageProps) -> HtmlElement {
 }
 
 struct IndexProps<'a> {
-    pub section: &'a Section<'a>,
+    pub ctx: &'a RenderSectionContext<'a>,
 }
 
-fn index(IndexProps { section }: IndexProps) -> HtmlElement {
+fn index(IndexProps { ctx }: IndexProps) -> HtmlElement {
     let styles = r#"
         body {
             background-color: darkslategray;
@@ -129,10 +129,10 @@ fn index(IndexProps { section }: IndexProps) -> HtmlElement {
 }
 
 struct SectionProps<'a> {
-    pub section: &'a Section<'a>,
+    pub ctx: &'a RenderSectionContext<'a>,
 }
 
-fn section(SectionProps { section }: SectionProps) -> HtmlElement {
+fn section(SectionProps { ctx }: SectionProps) -> HtmlElement {
     let styles = r#"
         body {
             background-color: darkslategray;
@@ -152,6 +152,8 @@ fn section(SectionProps { section }: SectionProps) -> HtmlElement {
             color: #fff;
         }
     "#;
+
+    let section = &ctx.section;
 
     let title = section.title.clone().unwrap_or(section.path.to_string());
 
@@ -174,11 +176,11 @@ fn section(SectionProps { section }: SectionProps) -> HtmlElement {
 }
 
 struct PageProps<'a> {
-    pub page: &'a Page<'a>,
+    pub ctx: &'a RenderPageContext<'a>,
     pub children: Vec<HtmlElement>,
 }
 
-fn page(PageProps { page, children }: PageProps) -> HtmlElement {
+fn page(PageProps { ctx, children }: PageProps) -> HtmlElement {
     let styles = r#"
         body {
             background-color: darkslategray;
@@ -200,6 +202,8 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
         }
     "#;
 
+    let page = &ctx.page;
+
     base_page(BasePageProps {
         title: page
             .title
@@ -218,11 +222,11 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
 }
 
 struct ProseProps<'a> {
-    pub page: &'a Page<'a>,
+    pub ctx: &'a RenderPageContext<'a>,
     pub children: Vec<HtmlElement>,
 }
 
-fn prose(ProseProps { page, children }: ProseProps) -> HtmlElement {
+fn prose(ProseProps { ctx, children }: ProseProps) -> HtmlElement {
     let styles = r#"
         body {
             background-color: papayawhip;
@@ -243,6 +247,8 @@ fn prose(ProseProps { page, children }: ProseProps) -> HtmlElement {
             line-height: 1.5rem;
         }
     "#;
+
+    let page = &ctx.page;
 
     base_page(BasePageProps {
         title: page
