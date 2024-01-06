@@ -94,7 +94,7 @@ checksum = "ca87830a3e3fb156dc96cfbd31cb620265dd053be734723f22b760d6cc3c3051"
 [[package]]
 name = "auk"
 version = "0.2.0"
-source = "git+https://github.com/maxdeviant/auk.git?rev=46baf01be720946cd0f706bb1c66deafddb0f515#46baf01be720946cd0f706bb1c66deafddb0f515"
+source = "git+https://github.com/maxdeviant/auk.git?rev=acc5a9a44b188ff1f0af7ca2d59675a8f15077ae#acc5a9a44b188ff1f0af7ca2d59675a8f15077ae"
 dependencies = [
  "indexmap 2.1.0",
 ]
