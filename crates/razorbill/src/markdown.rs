@@ -254,7 +254,9 @@ where
                         element.content = Some(text.to_string());
                     }
                 }
-                Event::Code(text) => self.push(self.components.code().content(text.to_string())),
+                Event::Code(text) => {
+                    self.push(self.components.code().text_content(text.to_string()))
+                }
                 Event::Html(html) => todo!(),
                 Event::SoftBreak => todo!(),
                 Event::HardBreak => self.push(self.components.br()),

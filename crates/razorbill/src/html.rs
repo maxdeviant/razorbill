@@ -46,7 +46,7 @@ impl HtmlElement {
         self
     }
 
-    pub fn content(mut self, content: impl Into<String>) -> Self {
+    pub fn text_content(mut self, content: impl Into<String>) -> Self {
         self.content = Some(content.into());
         self
     }
@@ -165,7 +165,7 @@ mod tests {
     fn it_works() {
         let element = div()
             .class("container")
-            .child(h1().class("heading").content("Hello, world!"));
+            .child(h1().class("heading").text_content("Hello, world!"));
 
         dbg!(element);
     }
@@ -175,7 +175,7 @@ mod tests {
         let element = div().class("outer").child(
             div()
                 .class("inner")
-                .child(h1().class("heading").content("Hello, world!")),
+                .child(h1().class("heading").text_content("Hello, world!")),
         );
 
         dbg!(element.render_to_string().unwrap());

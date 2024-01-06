@@ -52,7 +52,7 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                         .name("viewport")
                         .content_("width=device-width, initial-scale=1.0, maximum-scale=1"),
                 )
-                .child(title().content(props.title))
+                .child(title().text_content(props.title))
                 .child(
                     link()
                         .rel("stylesheet")
@@ -62,7 +62,7 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                     props
                         .styles
                         .into_iter()
-                        .map(|styles| style().content(styles)),
+                        .map(|styles| style().text_content(styles)),
                 ),
         )
         .children(props.children)
@@ -99,14 +99,14 @@ fn section(SectionProps { section }: SectionProps) -> HtmlElement {
         title: &title,
         styles: vec![styles],
         children: vec![body()
-            .child(h1().class("heading tc").content(&title))
+            .child(h1().class("heading tc").text_content(&title))
             .child(
                 div()
                     .class("content")
                     .children(section.pages.iter().map(|page| {
                         li().child(
                             a().href(format!("..{}/index.html", page.path))
-                                .content(page.title.clone().unwrap_or_default()),
+                                .text_content(page.title.clone().unwrap_or_default()),
                         )
                     })),
             )],
@@ -148,8 +148,11 @@ fn page(PageProps { page, children }: PageProps) -> HtmlElement {
             .unwrap_or(page.slug),
         styles: vec![styles],
         children: vec![body()
-            .child(h1().class("heading tc").content("Razorbill Blog"))
-            .child(h3().class("tc").content(format!("path = {}", page.path)))
+            .child(h1().class("heading tc").text_content("Razorbill Blog"))
+            .child(
+                h3().class("tc")
+                    .text_content(format!("path = {}", page.path)),
+            )
             .child(div().class("content").children(children))],
     })
 }
@@ -189,7 +192,7 @@ fn prose(ProseProps { page, children }: ProseProps) -> HtmlElement {
             .unwrap_or(page.slug),
         styles: vec![styles],
         children: vec![body()
-            .child(h1().class("heading tc").content("Razorbill Blog"))
+            .child(h1().class("heading tc").text_content("Razorbill Blog"))
             .child(div().class("content").children(children))],
     })
 }
