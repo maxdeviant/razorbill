@@ -80,9 +80,16 @@ pub enum ServeSiteError {
 static SITE_CONTENT: Lazy<Arc<RwLock<HashMap<String, String>>>> =
     Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
 
+struct BuildSiteParams {
+    root_path: PathBuf,
+    sass_path: Option<PathBuf>,
+    templates: Templates,
+}
+
 pub struct Site {
     root_path: PathBuf,
     content_path: PathBuf,
+    sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
     sections: HashMap<PathBuf, Section>,
@@ -93,6 +100,21 @@ pub struct Site {
 impl Site {
     pub fn builder() -> SiteBuilder<()> {
         SiteBuilder::new()
+    }
+
+    fn from_params(params: BuildSiteParams) -> Self {
+        let root_path = params.root_path;
+
+        Site {
+            root_path: root_path.to_owned(),
+            content_path: root_path.join("content"),
+            sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
+            output_path: root_path.join("public"),
+            templates: params.templates,
+            sections: HashMap::new(),
+            pages: HashMap::new(),
+            is_serving: false,
+        }
     }
 
     pub fn load(&mut self) -> Result<(), LoadSiteError> {
@@ -213,6 +235,44 @@ impl Site {
                 .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
         }
 
+        if let Some(sass_path) = self.sass_path.as_ref() {
+            fn is_sass(entry: &walkdir::DirEntry) -> bool {
+                entry
+                    .path()
+                    .extension()
+                    .and_then(|extension| extension.to_str())
+                    .map(|extension| extension == "sass" || extension == "scss")
+                    .unwrap_or(false)
+            }
+
+            fn is_partial(entry: &walkdir::DirEntry) -> bool {
+                entry
+                    .file_name()
+                    .to_str()
+                    .map(|filename| filename.starts_with('_'))
+                    .unwrap_or(false)
+            }
+
+            let sass_files = WalkDir::new(sass_path)
+                .into_iter()
+                .filter_entry(|entry| !is_partial(entry))
+                .filter_map(|entry| entry.ok())
+                .filter(is_sass)
+                .map(|entry| entry.into_path())
+                .collect::<Vec<_>>();
+
+            let options = grass::Options::default().style(grass::OutputStyle::Compressed);
+
+            for file in sass_files {
+                let css = grass::from_path(&file, &options).unwrap();
+                let path = file.strip_prefix(&sass_path).unwrap();
+
+                storage
+                    .store_css(&path.with_extension("css"), css)
+                    .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+            }
+        }
+
         Ok(())
     }
 
@@ -244,11 +304,10 @@ impl Site {
         .unwrap();
 
         let live_reload_broadcaster = live_reload_server.broadcaster();
-
-        let live_reload_address = "127.0.0.1:35729";
+        let live_reload_address = SocketAddr::from(([127, 0, 0, 1], 35729));
 
         let live_reload_server = live_reload_server
-            .bind(&*live_reload_address)
+            .bind(&live_reload_address)
             .expect("failed to bind live reload server");
 
         thread::spawn(move || {
@@ -274,15 +333,21 @@ impl Site {
                 (&Method::GET, path) => {
                     if path == "/livereload.js" {
                         return Ok(Response::builder()
-                            .header(header::CONTENT_TYPE, "application/javascript")
+                            .header(header::CONTENT_TYPE, "text/javascript")
                             .status(StatusCode::OK)
                             .body(full(LIVE_RELOAD_JS.to_owned()))
                             .unwrap());
                     }
 
                     if let Some(content) = SITE_CONTENT.read().unwrap().get(path) {
+                        let content_type = if path.ends_with(".css") {
+                            "text/css"
+                        } else {
+                            "text/html"
+                        };
+
                         return Ok(Response::builder()
-                            .header(header::CONTENT_TYPE, "text/html")
+                            .header(header::CONTENT_TYPE, content_type)
                             .status(StatusCode::OK)
                             .body(full(content.to_owned()))
                             .unwrap());
@@ -323,6 +388,10 @@ impl Site {
         watcher
             .watch(&site.read().unwrap().content_path, RecursiveMode::Recursive)
             .unwrap();
+
+        if let Some(sass_path) = site.read().unwrap().sass_path.as_ref() {
+            watcher.watch(sass_path, RecursiveMode::Recursive).unwrap();
+        }
 
         tokio::task::spawn(async move {
             use notify::EventKind;
@@ -406,7 +475,7 @@ impl SiteBuilder<WithRootPath> {
     ) -> SiteBuilder<WithTemplates> {
         SiteBuilder {
             state: WithTemplates {
-                root_path: self.state.root_path,
+                with_root_path: self.state,
                 templates: Templates {
                     index: Arc::new(index),
                     section: HashMap::from_iter([(
@@ -424,7 +493,7 @@ impl SiteBuilder<WithRootPath> {
 }
 
 pub struct WithTemplates {
-    root_path: PathBuf,
+    with_root_path: WithRootPath,
     templates: Templates,
 }
 
@@ -453,17 +522,35 @@ impl SiteBuilder<WithTemplates> {
         self
     }
 
-    pub fn build(self) -> Site {
-        let root_path = self.state.root_path;
-
-        Site {
-            root_path: root_path.to_owned(),
-            content_path: root_path.join("content"),
-            output_path: root_path.join("public"),
-            templates: self.state.templates,
-            sections: HashMap::new(),
-            pages: HashMap::new(),
-            is_serving: false,
+    pub fn with_sass(self, sass_path: impl AsRef<Path>) -> SiteBuilder<WithSass> {
+        SiteBuilder {
+            state: WithSass {
+                with_templates: self.state,
+                sass_path: sass_path.as_ref().to_owned(),
+            },
         }
+    }
+
+    pub fn build(self) -> Site {
+        Site::from_params(BuildSiteParams {
+            root_path: self.state.with_root_path.root_path,
+            sass_path: None,
+            templates: self.state.templates,
+        })
+    }
+}
+
+pub struct WithSass {
+    with_templates: WithTemplates,
+    sass_path: PathBuf,
+}
+
+impl SiteBuilder<WithSass> {
+    pub fn build(self) -> Site {
+        Site::from_params(BuildSiteParams {
+            root_path: self.state.with_templates.with_root_path.root_path,
+            sass_path: Some(self.state.sass_path),
+            templates: self.state.with_templates.templates,
+        })
     }
 }

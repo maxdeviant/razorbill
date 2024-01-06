@@ -43,6 +43,7 @@ async fn main() -> Result<()> {
                 })],
             })
         })
+        .with_sass("sass")
         .build();
 
     site.load()?;
@@ -57,7 +58,7 @@ async fn main() -> Result<()> {
 
 struct BasePageProps<'a> {
     pub title: &'a str,
-    pub styles: Vec<&'a str>,
+    pub stylesheets: Vec<&'a str>,
     pub children: Vec<HtmlElement>,
 }
 
@@ -81,9 +82,9 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                 )
                 .children(
                     props
-                        .styles
+                        .stylesheets
                         .into_iter()
-                        .map(|styles| style().text_content(styles)),
+                        .map(|stylesheet| link().rel("stylesheet").href(stylesheet)),
                 )
                 .child(script().src("/livereload.js?port=35729")),
         )
@@ -95,29 +96,9 @@ struct IndexProps<'a> {
 }
 
 fn index(IndexProps { ctx }: IndexProps) -> HtmlElement {
-    let styles = r#"
-        body {
-            background-color: darkslategray;
-            color: #f4f4f4;
-        }
-
-        .heading {
-            font-size: 5rem;
-        }
-
-        .content {
-            max-width: 720px;
-            margin: auto;
-        }
-
-        a {
-            color: #fff;
-        }
-    "#;
-
     base_page(BasePageProps {
         title: "Razorbill",
-        styles: vec![styles],
+        stylesheets: vec!["/style.css"],
         children: vec![body()
             .child(h1().class("heading tc").text_content("Razorbill"))
             .child(
@@ -156,33 +137,13 @@ struct SectionProps<'a> {
 }
 
 fn section(SectionProps { ctx }: SectionProps) -> HtmlElement {
-    let styles = r#"
-        body {
-            background-color: darkslategray;
-            color: #f4f4f4;
-        }
-
-        .heading {
-            font-size: 5rem;
-        }
-
-        .content {
-            max-width: 720px;
-            margin: auto;
-        }
-
-        a {
-            color: #fff;
-        }
-    "#;
-
     let section = &ctx.section;
 
     let title = section.title.clone().unwrap_or(section.path.to_string());
 
     base_page(BasePageProps {
         title: &title,
-        styles: vec![styles],
+        stylesheets: vec!["/style.css"],
         children: vec![body()
             .child(h1().class("heading tc").text_content(&title))
             .child(
@@ -204,27 +165,6 @@ struct PageProps<'a> {
 }
 
 fn page(PageProps { ctx, children }: PageProps) -> HtmlElement {
-    let styles = r#"
-        body {
-            background-color: darkslategray;
-            color: #f4f4f4;
-        }
-
-        .heading {
-            font-size: 5rem;
-        }
-
-        .content {
-            max-width: 720px;
-            margin: auto;
-        }
-
-        .post-paragraph {
-            font-size: 1.2rem;
-            line-height: 1.5rem;
-        }
-    "#;
-
     let page = &ctx.page;
 
     base_page(BasePageProps {
@@ -233,7 +173,7 @@ fn page(PageProps { ctx, children }: PageProps) -> HtmlElement {
             .as_ref()
             .map(|title| title.as_str())
             .unwrap_or(page.slug),
-        styles: vec![styles],
+        stylesheets: vec!["/style.css"],
         children: vec![body()
             .child(h1().class("heading tc").text_content("Razorbill Blog"))
             .child(
@@ -250,27 +190,6 @@ struct ProseProps<'a> {
 }
 
 fn prose(ProseProps { ctx, children }: ProseProps) -> HtmlElement {
-    let styles = r#"
-        body {
-            background-color: papayawhip;
-            color: palevioletred;
-        }
-
-        .heading {
-            font-size: 5rem;
-        }
-
-        .content {
-            max-width: 720px;
-            margin: auto;
-        }
-
-        .post-paragraph {
-            font-size: 1.2rem;
-            line-height: 1.5rem;
-        }
-    "#;
-
     let page = &ctx.page;
 
     base_page(BasePageProps {
@@ -279,7 +198,7 @@ fn prose(ProseProps { ctx, children }: ProseProps) -> HtmlElement {
             .as_ref()
             .map(|title| title.as_str())
             .unwrap_or(page.slug),
-        styles: vec![styles],
+        stylesheets: vec!["/prose.css"],
         children: vec![body()
             .child(h1().class("heading tc").text_content("Razorbill Blog"))
             .child(div().class("content").children(children))],

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
@@ -19,6 +19,8 @@ pub trait Store {
     ) -> Result<(), Self::Error>;
 
     fn store_rendered_page(&self, page: &Page, rendered_html: String) -> Result<(), Self::Error>;
+
+    fn store_css(&self, path: &Path, css: String) -> Result<(), Self::Error>;
 }
 
 pub struct DiskStorage {
@@ -74,6 +76,14 @@ impl Store for DiskStorage {
 
         Ok(())
     }
+
+    fn store_css(&self, path: &Path, css: String) -> Result<(), Self::Error> {
+        if let Some(parent) = path.parent() {
+            println!("mkdir {parent:?}");
+        }
+
+        Ok(())
+    }
 }
 
 pub struct InMemoryStorage {
@@ -113,6 +123,15 @@ impl Store for InMemoryStorage {
             .write()
             .map_err(|_| InMemoryStorageError::Poisoned)?
             .insert(page.path.0.clone(), rendered_html);
+
+        Ok(())
+    }
+
+    fn store_css(&self, path: &Path, css: String) -> Result<(), Self::Error> {
+        self.storage
+            .write()
+            .map_err(|_| InMemoryStorageError::Poisoned)?
+            .insert(format!("/{}", path.to_string_lossy().to_string()), css);
 
         Ok(())
     }
