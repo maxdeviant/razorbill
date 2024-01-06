@@ -1,6 +1,13 @@
 [package]
 name = "razorbill"
 version = "0.1.0"
+description = "A toolkit for bespoke static site generators."
+repository = "https://github.com/maxdeviant/razorbill"
+documentation = "https://docs.rs/razorbill"
+categories = ["web-programming"]
+keywords = ["static-site", "generator", "toolkit"]
+authors = ["Marshall Bowers <elliott.codes@gmail.com>"]
+license = "MIT"
 edition = "2021"
 
 [dependencies]
