@@ -3,6 +3,7 @@ pub mod html;
 pub mod markdown;
 pub mod render;
 mod site;
+mod storage;
 
 pub use site::*;
 

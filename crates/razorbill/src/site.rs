@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::fs::{self, File};
-use std::io::{self, Write};
+use std::io;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 use http_body_util::combinators::BoxBody;
@@ -22,6 +20,7 @@ use walkdir::WalkDir;
 use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
 use crate::html::HtmlElement;
 use crate::render::{PageToRender, SectionToRender};
+use crate::storage::{DiskStorage, InMemoryStorage, Store};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum TemplateKey {
@@ -57,6 +56,9 @@ pub enum RenderSiteError {
 
     #[error("template not found: {0:?}")]
     TemplateNotFound(TemplateKey),
+
+    #[error("storage error: {0}")]
+    Storage(String),
 }
 
 #[derive(Error, Debug)]
@@ -134,107 +136,14 @@ impl Site {
     }
 
     pub fn render(&mut self) -> Result<(), RenderSiteError> {
-        for section in self.sections.values() {
-            let output_dir = self.output_path.join(
-                PathBuf::from_str(
-                    &section
-                        .path
-                        .0
-                        .trim_end_matches("/_index")
-                        .trim_start_matches("/"),
-                )
-                .unwrap(),
-            );
-
-            fs::create_dir_all(&output_dir)?;
-
-            let output_path = output_dir.join("index.html");
-            let mut output_file = File::create(&output_path)?;
-
-            let section_template = if section.path == SectionPath("/_index".to_string()) {
-                &self.templates.index
-            } else {
-                let template_name = section
-                    .meta
-                    .template
-                    .clone()
-                    .map(TemplateKey::Custom)
-                    .unwrap_or(TemplateKey::Default);
-
-                let section_template = self
-                    .templates
-                    .section
-                    .get(&template_name)
-                    .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
-
-                section_template
-            };
-
-            let pages = section
-                .pages
-                .iter()
-                .map(|page| self.pages.get(page).unwrap())
-                .map(|page| PageToRender {
-                    title: &page.meta.title,
-                    slug: &page.slug,
-                    path: &page.path.0,
-                    raw_content: &page.raw_content,
-                })
-                .collect::<Vec<_>>();
-
-            let section = SectionToRender {
-                title: &section.meta.title,
-                path: &section.path.0,
-                raw_content: &section.raw_content,
-                pages,
-            };
-
-            let rendered = section_template(&section).render_to_string()?;
-
-            output_file.write_all(rendered.as_bytes())?;
+        if self.is_serving {
+            self.render_to(InMemoryStorage::new(SITE_CONTENT.clone()))
+        } else {
+            self.render_to(DiskStorage::new(self.output_path.clone()))
         }
-
-        for page in self.pages.values() {
-            let output_dir = self
-                .output_path
-                .join(PathBuf::from_str(&page.path.0.trim_start_matches("/")).unwrap());
-
-            fs::create_dir_all(&output_dir)?;
-
-            let output_path = output_dir.join("index.html");
-            let mut output_file = File::create(&output_path)?;
-
-            let template_name = page
-                .meta
-                .template
-                .clone()
-                .map(TemplateKey::Custom)
-                .unwrap_or(TemplateKey::Default);
-
-            let page_template = self
-                .templates
-                .page
-                .get(&template_name)
-                .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
-
-            let page = PageToRender {
-                title: &page.meta.title,
-                slug: &page.slug,
-                path: &page.path.0,
-                raw_content: &page.raw_content,
-            };
-
-            let rendered = page_template(&page).render_to_string()?;
-
-            output_file.write_all(rendered.as_bytes())?;
-
-            println!("Wrote {:?}", output_path);
-        }
-
-        Ok(())
     }
 
-    fn render_in_memory(&mut self) -> Result<(), RenderSiteError> {
+    fn render_to(&mut self, storage: impl Store) -> Result<(), RenderSiteError> {
         for section in self.sections.values() {
             let section_template = if section.path == SectionPath("/_index".to_string()) {
                 &self.templates.index
@@ -255,13 +164,12 @@ impl Site {
                 section_template
             };
 
-            let rendered = section_template(&SectionToRender::from_section(&section, &self.pages))
+            let rendered = section_template(&SectionToRender::from_section(section, &self.pages))
                 .render_to_string()?;
 
-            SITE_CONTENT
-                .write()
-                .unwrap()
-                .insert(section.path.0.replace("/_index", "/"), rendered);
+            storage
+                .store_rendered_section(&section, rendered)
+                .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
         }
 
         for page in self.pages.values() {
@@ -278,12 +186,11 @@ impl Site {
                 .get(&template_name)
                 .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
 
-            let rendered = page_template(&PageToRender::from_page(&page)).render_to_string()?;
+            let rendered = page_template(&PageToRender::from_page(page)).render_to_string()?;
 
-            SITE_CONTENT
-                .write()
-                .unwrap()
-                .insert(page.path.0.clone(), rendered);
+            storage
+                .store_rendered_page(&page, rendered)
+                .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
         }
 
         Ok(())
@@ -333,7 +240,7 @@ impl Site {
 
         self.is_serving = true;
 
-        self.render_in_memory().unwrap();
+        self.render().unwrap();
 
         loop {
             let (stream, _) = listener.accept().await?;
