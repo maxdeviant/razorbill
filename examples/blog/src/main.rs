@@ -3,7 +3,7 @@ use auk::*;
 use clap::{Parser, Subcommand};
 use razorbill::markdown::{markdown, MarkdownComponents};
 use razorbill::render::{PageToRender, RenderPageContext, RenderSectionContext};
-use razorbill::Site;
+use razorbill::{plumage, Site};
 
 #[derive(Parser)]
 struct Cli {
@@ -100,7 +100,10 @@ fn index(IndexProps { ctx }: IndexProps) -> HtmlElement {
         title: "Razorbill",
         stylesheets: vec!["/style.css"],
         children: vec![body()
-            .child(h1().class("heading tc").text_content("Razorbill"))
+            .child(
+                h1().class(plumage().class("heading").text_center())
+                    .text_content("Razorbill"),
+            )
             .child(
                 div()
                     .class("content")
@@ -145,7 +148,10 @@ fn section(SectionProps { ctx }: SectionProps) -> HtmlElement {
         title: &title,
         stylesheets: vec!["/style.css"],
         children: vec![body()
-            .child(h1().class("heading tc").text_content(&title))
+            .child(
+                h1().class(plumage().class("heading").text_center())
+                    .text_content(&title),
+            )
             .child(
                 div()
                     .class("content")
@@ -175,9 +181,12 @@ fn page(PageProps { ctx, children }: PageProps) -> HtmlElement {
             .unwrap_or(page.slug),
         stylesheets: vec!["/style.css"],
         children: vec![body()
-            .child(h1().class("heading tc").text_content("Razorbill Blog"))
             .child(
-                h3().class("tc")
+                h1().class(plumage().class("heading").text_center())
+                    .text_content("Razorbill Blog"),
+            )
+            .child(
+                h3().class(plumage().text_center())
                     .text_content(format!("path = {}", page.path)),
             )
             .child(div().class("content").children(children))],
@@ -200,7 +209,10 @@ fn prose(ProseProps { ctx, children }: ProseProps) -> HtmlElement {
             .unwrap_or(page.slug),
         stylesheets: vec!["/prose.css"],
         children: vec![body()
-            .child(h1().class("heading tc").text_content("Razorbill Blog"))
+            .child(
+                h1().class(plumage().class("heading").text_center())
+                    .text_content("Razorbill Blog"),
+            )
             .child(div().class("content").children(children))],
     })
 }

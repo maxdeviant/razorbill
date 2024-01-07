@@ -5,8 +5,10 @@ pub mod markdown;
 pub mod render;
 mod site;
 mod storage;
+mod style;
 
 pub use site::*;
+pub use style::*;
 
 #[cfg(test)]
 mod tests {
