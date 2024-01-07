@@ -23,7 +23,9 @@ use walkdir::WalkDir;
 use ws::{Message, Sender, WebSocket};
 
 use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
-use crate::render::{PageToRender, RenderPageContext, RenderSectionContext, SectionToRender};
+use crate::render::{
+    BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
+};
 use crate::storage::{DiskStorage, InMemoryStorage, Store};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -197,9 +199,11 @@ impl Site {
             };
 
             let ctx = RenderSectionContext {
-                content_path: &self.content_path,
-                sections: &self.sections,
-                pages: &self.pages,
+                base: BaseRenderContext {
+                    content_path: &self.content_path,
+                    sections: &self.sections,
+                    pages: &self.pages,
+                },
                 section: SectionToRender::from_section(section, &self.pages),
             };
 
@@ -225,6 +229,11 @@ impl Site {
                 .ok_or_else(|| RenderSiteError::TemplateNotFound(template_name))?;
 
             let ctx = RenderPageContext {
+                base: BaseRenderContext {
+                    content_path: &self.content_path,
+                    sections: &self.sections,
+                    pages: &self.pages,
+                },
                 page: PageToRender::from_page(page),
             };
 

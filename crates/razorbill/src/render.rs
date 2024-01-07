@@ -1,16 +1,16 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 use crate::content::{Page, Section};
 
-pub struct RenderSectionContext<'a> {
+pub struct BaseRenderContext<'a> {
     pub(crate) content_path: &'a Path,
     pub(crate) sections: &'a HashMap<PathBuf, Section>,
     pub(crate) pages: &'a HashMap<PathBuf, Page>,
-    pub section: SectionToRender<'a>,
 }
 
-impl<'a> RenderSectionContext<'a> {
+impl<'a> BaseRenderContext<'a> {
     pub fn get_section(&self, path: impl AsRef<Path>) -> Option<SectionToRender<'a>> {
         let path = path.as_ref();
         let path = if path.starts_with("@/") {
@@ -56,6 +56,21 @@ impl<'a> RenderSectionContext<'a> {
     }
 }
 
+pub struct RenderSectionContext<'a> {
+    pub(crate) base: BaseRenderContext<'a>,
+    pub section: SectionToRender<'a>,
+}
+
+impl<'a> Deref for RenderSectionContext<'a> {
+    type Target = BaseRenderContext<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+impl<'a> RenderSectionContext<'a> {}
+
 pub struct SectionToRender<'a> {
     pub title: &'a Option<String>,
     pub path: &'a str,
@@ -82,7 +97,16 @@ impl<'a> SectionToRender<'a> {
 }
 
 pub struct RenderPageContext<'a> {
+    pub(crate) base: BaseRenderContext<'a>,
     pub page: PageToRender<'a>,
+}
+
+impl<'a> Deref for RenderPageContext<'a> {
+    type Target = BaseRenderContext<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 pub struct PageToRender<'a> {
