@@ -51,8 +51,11 @@ pub struct PageFrontMatter {
 
 #[derive(Error, Debug)]
 pub enum ParsePageError {
-    #[error("failed to read page: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("failed to read page '{filepath}': {err}")]
+    Io {
+        err: std::io::Error,
+        filepath: PathBuf,
+    },
 
     #[error("invalid front matter in '{filepath}'")]
     InvalidFrontMatter { filepath: PathBuf },
@@ -64,7 +67,10 @@ impl Page {
         path: impl AsRef<Path>,
     ) -> Result<Self, ParsePageError> {
         let path = path.as_ref();
-        let contents = fs::read_to_string(path)?;
+        let contents = fs::read_to_string(path).map_err(|err| ParsePageError::Io {
+            err,
+            filepath: path.to_owned(),
+        })?;
 
         Self::parse(&contents, root_path, path)
     }

@@ -50,8 +50,11 @@ pub struct SectionFrontMatter {
 
 #[derive(Error, Debug)]
 pub enum ParseSectionError {
-    #[error("failed to read section: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("failed to read section '{index_path}': {err}")]
+    Io {
+        err: std::io::Error,
+        index_path: PathBuf,
+    },
 
     #[error("invalid front matter in '{filepath}'")]
     InvalidFrontMatter { filepath: PathBuf },
@@ -64,7 +67,10 @@ impl Section {
     ) -> Result<Self, ParseSectionError> {
         let path = path.as_ref();
         let index_path = path.join("_index.md");
-        let contents = fs::read_to_string(&index_path)?;
+        let contents = fs::read_to_string(&index_path).map_err(|err| ParseSectionError::Io {
+            err,
+            index_path: index_path.clone(),
+        })?;
 
         Self::parse(&contents, root_path, &index_path)
     }
