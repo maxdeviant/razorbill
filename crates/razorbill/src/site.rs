@@ -145,8 +145,9 @@ impl Site {
 
                 pages.push(Page::from_path(&self.content_path, path)?);
             } else {
-                let section = Section::from_path(&self.content_path, path)?;
-                sections.push(section);
+                if let Some(section) = Section::from_path(&self.content_path, path)? {
+                    sections.push(section);
+                }
             }
         }
 

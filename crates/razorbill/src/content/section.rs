@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::{fmt, fs};
+use std::{fmt, fs, io};
 
 use serde::Deserialize;
 use thiserror::Error;
@@ -64,15 +64,24 @@ impl Section {
     pub fn from_path(
         root_path: impl AsRef<Path>,
         path: impl AsRef<Path>,
-    ) -> Result<Self, ParseSectionError> {
+    ) -> Result<Option<Self>, ParseSectionError> {
         let path = path.as_ref();
         let index_path = path.join("_index.md");
-        let contents = fs::read_to_string(&index_path).map_err(|err| ParseSectionError::Io {
-            err,
-            index_path: index_path.clone(),
-        })?;
+        let contents = match fs::read_to_string(&index_path) {
+            Ok(contents) => Ok(contents),
+            Err(err) => {
+                if err.kind() == io::ErrorKind::NotFound {
+                    return Ok(None);
+                }
 
-        Self::parse(&contents, root_path, &index_path)
+                Err(ParseSectionError::Io {
+                    err,
+                    index_path: index_path.clone(),
+                })
+            }
+        }?;
+
+        Self::parse(&contents, root_path, &index_path).map(Some)
     }
 
     pub fn parse(
