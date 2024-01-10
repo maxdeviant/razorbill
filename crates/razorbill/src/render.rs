@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
+use serde::Deserialize;
+
 use crate::content::{Page, Section};
 
 pub struct BaseRenderContext<'a> {
@@ -75,6 +77,7 @@ pub struct SectionToRender<'a> {
     pub title: &'a Option<String>,
     pub path: &'a str,
     pub raw_content: &'a str,
+    pub extra: &'a toml::Table,
     pub pages: Vec<PageToRender<'a>>,
 }
 
@@ -91,8 +94,16 @@ impl<'a> SectionToRender<'a> {
             title: &section.meta.title,
             path: &section.path.0,
             raw_content: &section.raw_content,
+            extra: &section.meta.extra,
             pages,
         }
+    }
+
+    pub fn extra<'de, T>(&self) -> Result<T, toml::de::Error>
+    where
+        T: Deserialize<'de>,
+    {
+        T::deserialize(self.extra.clone())
     }
 }
 
@@ -114,6 +125,7 @@ pub struct PageToRender<'a> {
     pub slug: &'a str,
     pub path: &'a str,
     pub raw_content: &'a str,
+    pub extra: &'a toml::Table,
 }
 
 impl<'a> PageToRender<'a> {
@@ -123,6 +135,14 @@ impl<'a> PageToRender<'a> {
             slug: &page.slug,
             path: &page.path.0,
             raw_content: &page.raw_content,
+            extra: &page.meta.extra,
         }
+    }
+
+    pub fn extra<'de, T>(&self) -> Result<T, toml::de::Error>
+    where
+        T: Deserialize<'de>,
+    {
+        T::deserialize(self.extra.clone())
     }
 }

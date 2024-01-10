@@ -46,6 +46,9 @@ pub struct Section {
 pub struct SectionFrontMatter {
     pub title: Option<String>,
     pub template: Option<String>,
+
+    #[serde(default)]
+    pub extra: toml::Table,
 }
 
 #[derive(Error, Debug)]

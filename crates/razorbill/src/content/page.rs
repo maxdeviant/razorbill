@@ -47,6 +47,9 @@ pub struct PageFrontMatter {
     pub title: Option<String>,
     pub slug: Option<String>,
     pub template: Option<String>,
+
+    #[serde(default)]
+    pub extra: toml::Table,
 }
 
 #[derive(Error, Debug)]
