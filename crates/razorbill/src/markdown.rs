@@ -261,7 +261,9 @@ where
                 Event::Html(html) => {
                     // TODO: Add inline HTML support.
                 }
-                Event::SoftBreak => {}
+                Event::SoftBreak => {
+                    // TODO: Do we need to do anything here?
+                }
                 Event::HardBreak => self.push(self.components.br()),
                 Event::Rule => self.push(self.components.hr()),
                 Event::FootnoteReference(_) => {
