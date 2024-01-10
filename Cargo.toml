@@ -4,7 +4,7 @@ members = ["crates/*", "examples/*"]
 
 [workspace.dependencies]
 anyhow = "1.0.78"
-auk = { git = "https://github.com/maxdeviant/auk.git", rev = "acc5a9a44b188ff1f0af7ca2d59675a8f15077ae" }
+auk = { git = "https://github.com/maxdeviant/auk.git", rev = "27df0f443fde226cddd3ed1c264af233c1e19871" }
 clap = "4.4.13"
 grass = "0.13.1"
 http-body-util = "0.1.0"
