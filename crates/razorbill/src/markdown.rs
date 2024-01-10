@@ -256,11 +256,15 @@ where
                 Event::Code(text) => {
                     self.push(self.components.code().text_content(text.to_string()))
                 }
-                Event::Html(html) => todo!(),
-                Event::SoftBreak => todo!(),
+                Event::Html(html) => {
+                    // TODO: Add inline HTML support.
+                }
+                Event::SoftBreak => {}
                 Event::HardBreak => self.push(self.components.br()),
                 Event::Rule => self.push(self.components.hr()),
-                Event::FootnoteReference(_) => todo!(),
+                Event::FootnoteReference(_) => {
+                    // TODO: Add footnote support.
+                }
                 Event::TaskListMarker(checked) => todo!(),
             }
         }
@@ -366,7 +370,9 @@ where
                         .map(|title| title.to_string()),
                 ),
             ),
-            Tag::FootnoteDefinition(_) => todo!(),
+            Tag::FootnoteDefinition(_) => {
+                // TODO: Add footnote support.
+            }
         }
     }
 
@@ -399,8 +405,10 @@ where
             Tag::Strong => self.pop(),
             Tag::Strikethrough => self.pop(),
             Tag::Link(_, _, _) => self.pop(),
-            Tag::Image(_, _, _) => unreachable!(),
-            Tag::FootnoteDefinition(_) => todo!(),
+            Tag::Image(_, _, _) => {}
+            Tag::FootnoteDefinition(_) => {
+                // TODO: Add footnote support.
+            }
         }
     }
 }
