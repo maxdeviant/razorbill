@@ -250,7 +250,11 @@ where
                 }
                 Event::Text(text) => {
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
-                        element.text_content_mut().replace(text.to_string());
+                        if let Some(existing_content) = element.text_content_mut() {
+                            existing_content.push_str(&text);
+                        } else {
+                            element.text_content_mut().replace(text.to_string());
+                        }
                     }
                 }
                 Event::Code(text) => {
