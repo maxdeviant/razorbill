@@ -250,11 +250,9 @@ where
                 }
                 Event::Text(text) => {
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
-                        if let Some(existing_content) = element.text_content_mut() {
-                            existing_content.push_str(&text);
-                        } else {
-                            element.text_content_mut().replace(text.to_string());
-                        }
+                        element
+                            .children_mut()
+                            .push(HtmlElement::unstable_raw_text(text.to_string()));
                     }
                 }
                 Event::Code(text) => {
@@ -441,6 +439,15 @@ mod tests {
             1. One
             1. Two
             1. Three
+        "};
+
+        dbg!(markdown(text, MarkdownComponents::default()));
+    }
+
+    #[test]
+    fn test_markdown_link() {
+        let text = indoc! {"
+            Here is a [link](https://example.com) that you should click!
         "};
 
         dbg!(markdown(text, MarkdownComponents::default()));
