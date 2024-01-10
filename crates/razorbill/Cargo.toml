@@ -32,3 +32,4 @@ ws.workspace = true
 
 [dev-dependencies]
 indoc.workspace = true
+insta = { workspace = true, features = ["yaml"] }

@@ -1,0 +1,6 @@
+---
+source: crates/razorbill/src/markdown.rs
+expression: parse_and_render_markdown(text)
+---
+"<h1>Table</h1><table><thead><tr><th>Name</th><th>Value</th><th>Value 2</th></tr></thead><tr><th>A</th><th>1</th><th>17</th></tr><tr><th>B</th><th>2</th><th>25</th></tr><tr><th>C</th><th>3</th><th>32</th></tr></table>"
+

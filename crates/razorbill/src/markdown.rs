@@ -427,6 +427,16 @@ mod tests {
 
     use super::*;
 
+    fn parse_and_render_markdown(text: &str) -> String {
+        let elements = markdown(text, MarkdownComponents::default());
+
+        elements
+            .into_iter()
+            .map(|element| element.render_to_string().unwrap())
+            .collect::<Vec<_>>()
+            .join("")
+    }
+
     #[test]
     fn test_markdown() {
         let text = indoc! {"
@@ -447,7 +457,7 @@ mod tests {
             1. Three
         "};
 
-        dbg!(markdown(text, MarkdownComponents::default()));
+        insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
     }
 
     #[test]
@@ -456,7 +466,7 @@ mod tests {
             Here is a [link](https://example.com) that you should click!
         "};
 
-        dbg!(markdown(text, MarkdownComponents::default()));
+        insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
     }
 
     #[test]
@@ -467,7 +477,7 @@ mod tests {
             - `Three`
         "};
 
-        dbg!(markdown(text, MarkdownComponents::default()));
+        insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
     }
 
     #[test]
@@ -482,6 +492,6 @@ mod tests {
             | C    | 3     | 32      |
         "};
 
-        dbg!(markdown(text, MarkdownComponents::default()));
+        insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
     }
 }
