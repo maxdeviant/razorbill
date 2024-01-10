@@ -256,7 +256,7 @@ where
                     }
                 }
                 Event::Code(text) => {
-                    self.push(self.components.code().text_content(text.to_string()))
+                    self.write(self.components.code().text_content(text.to_string()));
                 }
                 Event::Html(html) => {
                     // TODO: Add inline HTML support.
@@ -264,8 +264,8 @@ where
                 Event::SoftBreak => {
                     // TODO: Do we need to do anything here?
                 }
-                Event::HardBreak => self.push(self.components.br()),
-                Event::Rule => self.push(self.components.hr()),
+                Event::HardBreak => self.write(self.components.br()),
+                Event::Rule => self.write(self.components.hr()),
                 Event::FootnoteReference(_) => {
                     // TODO: Add footnote support.
                 }
@@ -276,17 +276,21 @@ where
         self.elements
     }
 
+    pub fn write(&mut self, element: HtmlElement) {
+        if let Some(parent) = self.current_element_stack.back_mut() {
+            parent.children_mut().push(element);
+        } else {
+            self.elements.push(element);
+        }
+    }
+
     fn push(&mut self, element: HtmlElement) {
         self.current_element_stack.push_back(element);
     }
 
     fn pop(&mut self) {
         if let Some(element) = self.current_element_stack.pop_back() {
-            if let Some(parent) = self.current_element_stack.back_mut() {
-                parent.children_mut().push(element);
-            } else {
-                self.elements.push(element);
-            }
+            self.write(element);
         }
     }
 
@@ -450,6 +454,17 @@ mod tests {
     fn test_markdown_link() {
         let text = indoc! {"
             Here is a [link](https://example.com) that you should click!
+        "};
+
+        dbg!(markdown(text, MarkdownComponents::default()));
+    }
+
+    #[test]
+    fn test_markdown_list_with_inline_code() {
+        let text = indoc! {"
+            - `One`
+            - `Two`
+            - `Three`
         "};
 
         dbg!(markdown(text, MarkdownComponents::default()));
