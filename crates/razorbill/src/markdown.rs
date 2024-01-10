@@ -409,7 +409,7 @@ where
             Tag::Strong => self.pop(),
             Tag::Strikethrough => self.pop(),
             Tag::Link(_, _, _) => self.pop(),
-            Tag::Image(_, _, _) => {}
+            Tag::Image(_, _, _) => self.pop(),
             Tag::FootnoteDefinition(_) => {
                 // TODO: Add footnote support.
             }
