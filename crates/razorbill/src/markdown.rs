@@ -443,6 +443,8 @@ where
             Tag::TableHead => {
                 self.pop();
                 self.pop();
+
+                self.table_state = TableState::Body;
             }
             Tag::TableRow => self.pop(),
             Tag::TableCell => {
