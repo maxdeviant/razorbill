@@ -16,7 +16,7 @@ insta = "1.34.0"
 notify = { version = "6.1.1", default-features = false }
 once_cell = "1.19.0"
 pretty_assertions = "1.4.0"
-pulldown-cmark = "0.9.3"
+pulldown-cmark = { version = "0.9.3", default-features = false }
 razorbill = { path = "crates/razorbill" }
 regex = "1.10.2"
 serde = "1.0.194"
