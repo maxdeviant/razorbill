@@ -4,7 +4,9 @@ use std::{fmt, fs};
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::content::{parse_front_matter, FileInfo};
+use crate::content::{
+    parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount, AVERAGE_ADULT_WPM,
+};
 
 #[derive(Debug)]
 pub struct Page {
@@ -13,6 +15,8 @@ pub struct Page {
     pub path: PagePath,
     pub slug: String,
     pub raw_content: String,
+    pub word_count: WordCount,
+    pub read_time: ReadTime,
 }
 
 #[derive(Debug)]
@@ -102,12 +106,16 @@ impl Page {
 
         let path = PagePath::from_file_path(root_path, &file.path).unwrap();
 
+        let reading_metrics = ReadingMetrics::for_content(&content, AVERAGE_ADULT_WPM);
+
         Ok(Self {
             meta: front_matter,
             file,
             path,
             slug,
             raw_content: content.to_string(),
+            word_count: reading_metrics.word_count,
+            read_time: reading_metrics.read_time,
         })
     }
 }

@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::content::{Page, Section};
+use crate::content::{Page, ReadTime, Section, WordCount};
 
 pub struct BaseRenderContext<'a> {
     pub(crate) content_path: &'a Path,
@@ -77,6 +77,8 @@ pub struct SectionToRender<'a> {
     pub title: &'a Option<String>,
     pub path: &'a str,
     pub raw_content: &'a str,
+    pub word_count: WordCount,
+    pub read_time: ReadTime,
     pub extra: &'a toml::Table,
     pub pages: Vec<PageToRender<'a>>,
 }
@@ -94,6 +96,8 @@ impl<'a> SectionToRender<'a> {
             title: &section.meta.title,
             path: &section.path.0,
             raw_content: &section.raw_content,
+            word_count: section.word_count,
+            read_time: section.read_time,
             extra: &section.meta.extra,
             pages,
         }
@@ -125,6 +129,8 @@ pub struct PageToRender<'a> {
     pub slug: &'a str,
     pub path: &'a str,
     pub raw_content: &'a str,
+    pub word_count: WordCount,
+    pub read_time: ReadTime,
     pub extra: &'a toml::Table,
 }
 
@@ -135,6 +141,8 @@ impl<'a> PageToRender<'a> {
             slug: &page.slug,
             path: &page.path.0,
             raw_content: &page.raw_content,
+            word_count: page.word_count,
+            read_time: page.read_time,
             extra: &page.meta.extra,
         }
     }

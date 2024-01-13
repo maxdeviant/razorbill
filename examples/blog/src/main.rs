@@ -189,6 +189,10 @@ fn page(PageProps { ctx, children }: PageProps) -> HtmlElement {
                 h3().class(plumage().text_center())
                     .text_content(format!("path = {}", page.path)),
             )
+            .child(h4().class(plumage().text_center()).text_content(format!(
+                "{} words | {} minutes",
+                page.word_count.0, page.read_time.0
+            )))
             .child(div().class("content").children(children))],
     })
 }

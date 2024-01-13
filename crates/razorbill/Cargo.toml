@@ -26,6 +26,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 toml.workspace = true
+unicode-segmentation.workspace = true
 url.workspace = true
 walkdir.workspace = true
 ws.workspace = true
@@ -33,3 +34,4 @@ ws.workspace = true
 [dev-dependencies]
 indoc.workspace = true
 insta = { workspace = true, features = ["yaml"] }
+pretty_assertions.workspace = true
