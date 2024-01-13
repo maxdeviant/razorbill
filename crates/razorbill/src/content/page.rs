@@ -5,7 +5,8 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::content::{
-    parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount, AVERAGE_ADULT_WPM,
+    from_toml_datetime, parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount,
+    AVERAGE_ADULT_WPM,
 };
 
 #[derive(Debug)]
@@ -50,6 +51,10 @@ impl PagePath {
 pub struct PageFrontMatter {
     pub title: Option<String>,
     pub slug: Option<String>,
+    #[serde(default, deserialize_with = "from_toml_datetime")]
+    pub date: Option<String>,
+    #[serde(default, deserialize_with = "from_toml_datetime")]
+    pub updated: Option<String>,
     pub template: Option<String>,
 
     #[serde(default)]

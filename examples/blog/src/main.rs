@@ -185,6 +185,10 @@ fn page(PageProps { ctx, children }: PageProps) -> HtmlElement {
                 h1().class(plumage().class("heading").text_center())
                     .text_content("Razorbill Blog"),
             )
+            .children(page.date.as_ref().map(|date| {
+                h3().class(plumage().text_center())
+                    .text_content(format!("{}", date))
+            }))
             .child(
                 h3().class(plumage().text_center())
                     .text_content(format!("path = {}", page.path)),
