@@ -162,10 +162,19 @@ impl Site {
         }
 
         for (path, page) in self.pages.iter_mut() {
-            let parent_section_path = page.file.parent.join("_index.md");
+            let mut parent_section_path = page.file.parent.join("_index.md");
 
-            if let Some(parent_section) = self.sections.get_mut(&parent_section_path) {
+            while let Some(parent_section) = self.sections.get_mut(&parent_section_path) {
                 parent_section.pages.push(path.clone());
+
+                if !parent_section.meta.transparent {
+                    break;
+                }
+
+                match parent_section_path.clone().parent().unwrap().parent() {
+                    Some(parent) => parent_section_path = parent.join("_index.md"),
+                    None => break,
+                }
             }
         }
 

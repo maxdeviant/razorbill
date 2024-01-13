@@ -56,6 +56,9 @@ pub struct SectionFrontMatter {
     pub sort_by: MaybeSortBy,
 
     #[serde(default)]
+    pub transparent: bool,
+
+    #[serde(default)]
     pub extra: toml::Table,
 }
 
