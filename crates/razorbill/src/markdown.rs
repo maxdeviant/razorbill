@@ -1,9 +1,12 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use auk::{HtmlElement, WithChildren};
-use pulldown_cmark::{self as md, Alignment, CodeBlockKind, Event, HeadingLevel, LinkType, Tag};
+use pulldown_cmark::{
+    self as md, Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag,
+};
 
 pub struct MarkdownComponents {
+    pub div: Box<dyn Fn() -> HtmlElement>,
     pub p: Box<dyn Fn() -> HtmlElement>,
     pub h1: Box<dyn Fn() -> HtmlElement>,
     pub h2: Box<dyn Fn() -> HtmlElement>,
@@ -29,9 +32,15 @@ pub struct MarkdownComponents {
     pub img: Box<dyn Fn() -> HtmlElement>,
     pub br: Box<dyn Fn() -> HtmlElement>,
     pub hr: Box<dyn Fn() -> HtmlElement>,
+    pub sup: Box<dyn Fn() -> HtmlElement>,
 }
 
 impl MarkdownComponents {
+    #[inline(always)]
+    pub fn div(&self) -> HtmlElement {
+        (self.div)()
+    }
+
     #[inline(always)]
     pub fn p(&self) -> HtmlElement {
         (self.p)()
@@ -156,6 +165,11 @@ impl MarkdownComponents {
     pub fn hr(&self) -> HtmlElement {
         (self.hr)()
     }
+
+    #[inline(always)]
+    pub fn sup(&self) -> HtmlElement {
+        (self.sup)()
+    }
 }
 
 impl Default for MarkdownComponents {
@@ -163,6 +177,7 @@ impl Default for MarkdownComponents {
         use auk::*;
 
         Self {
+            div: Box::new(div),
             p: Box::new(p),
             h1: Box::new(h1),
             h2: Box::new(h2),
@@ -188,6 +203,7 @@ impl Default for MarkdownComponents {
             img: Box::new(img),
             br: Box::new(br),
             hr: Box::new(hr),
+            sup: Box::new(sup),
         }
     }
 }
@@ -221,6 +237,7 @@ where
     table_state: TableState,
     table_alignments: Vec<Alignment>,
     table_cell_index: usize,
+    footnotes: HashMap<CowStr<'a>, usize>,
 }
 
 impl<'a, I> HtmlElementWriter<'a, I>
@@ -236,6 +253,7 @@ where
             table_state: TableState::Head,
             table_alignments: Vec::new(),
             table_cell_index: 0,
+            footnotes: HashMap::new(),
         }
     }
 
@@ -266,8 +284,21 @@ where
                 }
                 Event::HardBreak => self.write(self.components.br()),
                 Event::Rule => self.write(self.components.hr()),
-                Event::FootnoteReference(_) => {
-                    // TODO: Add footnote support.
+                Event::FootnoteReference(name) => {
+                    let next_footnote_number = self.footnotes.len() + 1;
+                    let number = *self
+                        .footnotes
+                        .entry(name.clone())
+                        .or_insert(next_footnote_number);
+
+                    self.write(
+                        self.components.sup().class("footnote-reference").child(
+                            self.components
+                                .a()
+                                .href(format!("#{name}"))
+                                .text_content(number.to_string()),
+                        ),
+                    );
                 }
                 Event::TaskListMarker(checked) => todo!(),
             }
@@ -294,7 +325,7 @@ where
         }
     }
 
-    fn start_tag(&mut self, tag: Tag) {
+    fn start_tag(&mut self, tag: Tag<'a>) {
         match tag {
             Tag::Paragraph => self.push(self.components.p()),
             Tag::Heading(level, id, classes) => {
@@ -378,8 +409,25 @@ where
                         .map(|title| title.to_string()),
                 ),
             ),
-            Tag::FootnoteDefinition(_) => {
-                // TODO: Add footnote support.
+            Tag::FootnoteDefinition(name) => {
+                let next_footnote_number = self.footnotes.len() + 1;
+                let number = *self
+                    .footnotes
+                    .entry(name.clone())
+                    .or_insert(next_footnote_number);
+
+                self.push(
+                    self.components
+                        .div()
+                        .class("footnote-definition")
+                        .id(name.to_string()),
+                );
+                self.write(
+                    self.components
+                        .sup()
+                        .class("footnote-definition-label")
+                        .child(HtmlElement::unstable_raw_text(number.to_string())),
+                );
             }
         }
     }
@@ -415,7 +463,7 @@ where
             Tag::Link(_, _, _) => self.pop(),
             Tag::Image(_, _, _) => self.pop(),
             Tag::FootnoteDefinition(_) => {
-                // TODO: Add footnote support.
+                self.pop();
             }
         }
     }
@@ -490,6 +538,21 @@ mod tests {
             | A    | 1     | 17      |
             | B    | 2     | 25      |
             | C    | 3     | 32      |
+        "};
+
+        insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
+    }
+
+    #[test]
+    fn test_markdown_footnotes() {
+        let text = indoc! {"
+            The quick[^1] brown fox jumped over the lazy[^2] dog.
+
+            ---
+
+            [^1]: The fox wasn't all that quick.
+
+            [^2]: The dog wasn't all that lazy.
         "};
 
         insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
