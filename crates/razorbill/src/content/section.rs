@@ -5,7 +5,8 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::content::{
-    parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount, AVERAGE_ADULT_WPM,
+    parse_front_matter, FileInfo, MaybeSortBy, ReadTime, ReadingMetrics, WordCount,
+    AVERAGE_ADULT_WPM,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -50,6 +51,9 @@ pub struct Section {
 pub struct SectionFrontMatter {
     pub title: Option<String>,
     pub template: Option<String>,
+
+    #[serde(default)]
+    pub sort_by: MaybeSortBy,
 
     #[serde(default)]
     pub extra: toml::Table,

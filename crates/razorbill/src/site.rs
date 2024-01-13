@@ -22,7 +22,9 @@ use tokio::sync::mpsc::unbounded_channel;
 use walkdir::WalkDir;
 use ws::{Message, Sender, WebSocket};
 
-use crate::content::{Page, ParsePageError, ParseSectionError, Section, SectionPath};
+use crate::content::{
+    sort_pages_by, Page, ParsePageError, ParseSectionError, Section, SectionPath,
+};
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
 };
@@ -165,6 +167,24 @@ impl Site {
             if let Some(parent_section) = self.sections.get_mut(&parent_section_path) {
                 parent_section.pages.push(path.clone());
             }
+        }
+
+        for (_path, section) in &mut self.sections {
+            let pages = section
+                .pages
+                .iter()
+                .map(|path| &self.pages[path])
+                .collect::<Vec<_>>();
+
+            let (sorted_pages, unsorted_pages) = match section.meta.sort_by.into() {
+                Some(sort_by) => sort_pages_by(sort_by, pages),
+                None => continue,
+            };
+
+            let mut reordered_pages = sorted_pages;
+            reordered_pages.extend(unsorted_pages);
+
+            section.pages = reordered_pages;
         }
 
         Ok(())
