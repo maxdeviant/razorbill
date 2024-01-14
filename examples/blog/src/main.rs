@@ -23,6 +23,7 @@ async fn main() -> Result<()> {
 
     let mut site = Site::builder()
         .root("examples/blog")
+        .base_url("https://blog.example.com")
         .templates(
             |ctx| index(IndexProps { ctx }),
             |ctx| section(SectionProps { ctx }),

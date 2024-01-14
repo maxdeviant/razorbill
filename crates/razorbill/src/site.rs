@@ -86,12 +86,14 @@ static SITE_CONTENT: Lazy<Arc<RwLock<HashMap<String, String>>>> =
     Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 struct BuildSiteParams {
+    base_url: String,
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
     templates: Templates,
 }
 
 pub struct Site {
+    base_url: String,
     root_path: PathBuf,
     content_path: PathBuf,
     sass_path: Option<PathBuf>,
@@ -111,6 +113,7 @@ impl Site {
         let root_path = params.root_path;
 
         Site {
+            base_url: params.base_url,
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
@@ -231,6 +234,7 @@ impl Site {
 
             let ctx = RenderSectionContext {
                 base: BaseRenderContext {
+                    base_url: &self.base_url,
                     content_path: &self.content_path,
                     sections: &self.sections,
                     pages: &self.pages,
@@ -261,6 +265,7 @@ impl Site {
 
             let ctx = RenderPageContext {
                 base: BaseRenderContext {
+                    base_url: &self.base_url,
                     content_path: &self.content_path,
                     sections: &self.sections,
                     pages: &self.pages,
@@ -316,8 +321,10 @@ impl Site {
         Ok(())
     }
 
-    pub async fn serve(self) -> Result<(), ServeSiteError> {
+    pub async fn serve(mut self) -> Result<(), ServeSiteError> {
         let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+
+        self.base_url = format!("http://{}", addr.to_string());
 
         let listener = TcpListener::bind(addr).await?;
 
@@ -507,6 +514,22 @@ pub struct WithRootPath {
 }
 
 impl SiteBuilder<WithRootPath> {
+    pub fn base_url(self, base_url: impl Into<String>) -> SiteBuilder<WithBaseUrl> {
+        SiteBuilder {
+            state: WithBaseUrl {
+                with_root_path: self.state,
+                base_url: base_url.into(),
+            },
+        }
+    }
+}
+
+pub struct WithBaseUrl {
+    with_root_path: WithRootPath,
+    base_url: String,
+}
+
+impl SiteBuilder<WithBaseUrl> {
     pub fn templates(
         self,
         index: impl Fn(&RenderSectionContext) -> HtmlElement + Send + Sync + 'static,
@@ -515,7 +538,7 @@ impl SiteBuilder<WithRootPath> {
     ) -> SiteBuilder<WithTemplates> {
         SiteBuilder {
             state: WithTemplates {
-                with_root_path: self.state,
+                with_base_url: self.state,
                 templates: Templates {
                     index: Arc::new(index),
                     section: HashMap::from_iter([(
@@ -533,7 +556,7 @@ impl SiteBuilder<WithRootPath> {
 }
 
 pub struct WithTemplates {
-    with_root_path: WithRootPath,
+    with_base_url: WithBaseUrl,
     templates: Templates,
 }
 
@@ -573,7 +596,8 @@ impl SiteBuilder<WithTemplates> {
 
     pub fn build(self) -> Site {
         Site::from_params(BuildSiteParams {
-            root_path: self.state.with_root_path.root_path,
+            base_url: self.state.with_base_url.base_url,
+            root_path: self.state.with_base_url.with_root_path.root_path,
             sass_path: None,
             templates: self.state.templates,
         })
@@ -588,7 +612,13 @@ pub struct WithSass {
 impl SiteBuilder<WithSass> {
     pub fn build(self) -> Site {
         Site::from_params(BuildSiteParams {
-            root_path: self.state.with_templates.with_root_path.root_path,
+            base_url: self.state.with_templates.with_base_url.base_url,
+            root_path: self
+                .state
+                .with_templates
+                .with_base_url
+                .with_root_path
+                .root_path,
             sass_path: Some(self.state.sass_path),
             templates: self.state.with_templates.templates,
         })
