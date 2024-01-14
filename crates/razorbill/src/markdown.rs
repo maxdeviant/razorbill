@@ -226,6 +226,19 @@ enum TableState {
     Body,
 }
 
+fn escape_html(text: &str) -> String {
+    // TODO: Should we be doing the escaping inside of `auk`?
+    let mut escaped_text = String::with_capacity(text.len());
+    md::escape::escape_html(&mut escaped_text, &text).unwrap();
+    escaped_text
+}
+
+fn escape_href(href: &str) -> String {
+    let mut escaped_href = String::with_capacity(href.len());
+    md::escape::escape_href(&mut escaped_href, &href).unwrap();
+    escaped_href
+}
+
 struct HtmlElementWriter<'a, I>
 where
     I: Iterator<Item = Event<'a>>,
@@ -268,11 +281,11 @@ where
                 }
                 Event::Text(text) => {
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
-                        element.children_mut().push(text.to_string().into());
+                        element.children_mut().push(escape_html(&text).into());
                     }
                 }
                 Event::Code(text) => {
-                    self.write(self.components.code().child(text.to_string()));
+                    self.write(self.components.code().child(escape_html(&text)));
                 }
                 Event::Html(html) => {
                     // TODO: Add inline HTML support.
@@ -293,7 +306,7 @@ where
                         self.components.sup().class("footnote-reference").child(
                             self.components
                                 .a()
-                                .href(format!("#{name}"))
+                                .href(format!("#{}", escape_html(&name)))
                                 .child(number.to_string()),
                         ),
                     );
@@ -305,7 +318,7 @@ where
         self.elements
     }
 
-    pub fn write(&mut self, element: HtmlElement) {
+    fn write(&mut self, element: HtmlElement) {
         if let Some(parent) = self.current_element_stack.back_mut() {
             parent.children_mut().push(element.into());
         } else {
@@ -337,10 +350,16 @@ where
                 };
 
                 self.push(
-                    heading.id::<String>(id.map(Into::into)).class::<String>(
+                    heading.id::<String>(id.map(escape_html)).class::<String>(
                         Some(classes)
                             .filter(|classes| !classes.is_empty())
-                            .map(|classes| classes.join(" ")),
+                            .map(|classes| {
+                                classes
+                                    .into_iter()
+                                    .map(escape_html)
+                                    .collect::<Vec<_>>()
+                                    .join(" ")
+                            }),
                     ),
                 )
             }
@@ -374,7 +393,11 @@ where
                     if language.is_empty() {
                         self.push(self.components.code());
                     } else {
-                        self.push(self.components.code().class(format!("language-{language}")));
+                        self.push(
+                            self.components
+                                .code()
+                                .class(format!("language-{}", escape_html(language))),
+                        );
                     }
                 }
                 CodeBlockKind::Indented => {
@@ -392,26 +415,33 @@ where
             Tag::Link(LinkType::Email, dest, title) => self.push(
                 self.components
                     .a()
-                    .href(format!("mailto:{}", dest))
+                    .href(format!("mailto:{}", escape_href(&dest)))
                     .title::<String>(
                         Some(title)
                             .filter(|title| !title.is_empty())
-                            .map(|title| title.to_string()),
+                            .map(|title| escape_html(&title)),
                     ),
             ),
             Tag::Link(_link_type, dest, title) => self.push(
-                self.components.a().href(dest.to_string()).title::<String>(
-                    Some(title)
-                        .filter(|title| !title.is_empty())
-                        .map(|title| title.to_string()),
-                ),
+                self.components
+                    .a()
+                    .href(escape_href(&dest))
+                    .title::<String>(
+                        Some(title)
+                            .filter(|title| !title.is_empty())
+                            .map(|title| escape_html(&title)),
+                    ),
             ),
             Tag::Image(_link_type, dest, title) => self.push(
-                self.components.img().src(dest.to_string()).title::<String>(
-                    Some(title)
-                        .filter(|title| !title.is_empty())
-                        .map(|title| title.to_string()),
-                ),
+                self.components
+                    .img()
+                    .src(escape_href(&dest))
+                    // TODO: Add `alt` text.
+                    .title::<String>(
+                        Some(title)
+                            .filter(|title| !title.is_empty())
+                            .map(|title| escape_html(&title)),
+                    ),
             ),
             Tag::FootnoteDefinition(name) => {
                 let next_footnote_number = self.footnotes.len() + 1;
@@ -424,7 +454,7 @@ where
                     self.components
                         .div()
                         .class("footnote-definition")
-                        .id(name.to_string()),
+                        .id(escape_html(&name)),
                 );
                 self.write(
                     self.components
