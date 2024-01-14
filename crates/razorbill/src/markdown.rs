@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use auk::{text, HtmlElement, WithChildren};
+use auk::{HtmlElement, WithChildren};
 use pulldown_cmark::{
     self as md, Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag,
 };
@@ -268,13 +268,11 @@ where
                 }
                 Event::Text(text) => {
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
-                        element
-                            .children_mut()
-                            .push(auk::text(text.to_string()).into());
+                        element.children_mut().push(text.to_string().into());
                     }
                 }
                 Event::Code(text) => {
-                    self.write(self.components.code().child(auk::text(text.to_string())));
+                    self.write(self.components.code().child(text.to_string()));
                 }
                 Event::Html(html) => {
                     // TODO: Add inline HTML support.
@@ -296,7 +294,7 @@ where
                             self.components
                                 .a()
                                 .href(format!("#{name}"))
-                                .child(text(number.to_string())),
+                                .child(number.to_string()),
                         ),
                     );
                 }
@@ -426,7 +424,7 @@ where
                     self.components
                         .sup()
                         .class("footnote-definition-label")
-                        .child(text(number.to_string())),
+                        .child(number.to_string()),
                 );
             }
         }
