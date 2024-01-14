@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::{io, thread};
 
+use auk::renderer::HtmlElementRenderer;
 use auk::HtmlElement;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
@@ -237,7 +238,7 @@ impl Site {
                 section: SectionToRender::from_section(section, &self.pages),
             };
 
-            let rendered = section_template(&ctx).render_to_string()?;
+            let rendered = HtmlElementRenderer::new().render_to_string(&section_template(&ctx))?;
 
             storage
                 .store_rendered_section(&section, rendered)
@@ -267,7 +268,7 @@ impl Site {
                 page: PageToRender::from_page(page),
             };
 
-            let rendered = page_template(&ctx).render_to_string()?;
+            let rendered = HtmlElementRenderer::new().render_to_string(&page_template(&ctx))?;
 
             storage
                 .store_rendered_page(&page, rendered)

@@ -12,6 +12,7 @@ pub use style::*;
 
 #[cfg(test)]
 mod tests {
+    use auk::renderer::HtmlElementRenderer;
     use auk::*;
     use indoc::indoc;
 
@@ -35,7 +36,9 @@ mod tests {
             ),
         );
 
-        let rendered = root_element.render_to_string().unwrap();
+        let rendered = HtmlElementRenderer::new()
+            .render_to_string(&root_element)
+            .unwrap();
 
         dbg!(rendered);
     }

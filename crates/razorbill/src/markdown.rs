@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use auk::{HtmlElement, WithChildren};
+use auk::{text, HtmlElement, WithChildren};
 use pulldown_cmark::{
     self as md, Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag,
 };
@@ -270,11 +270,11 @@ where
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
                         element
                             .children_mut()
-                            .push(HtmlElement::unstable_raw_text(text.to_string()));
+                            .push(auk::text(text.to_string()).into());
                     }
                 }
                 Event::Code(text) => {
-                    self.write(self.components.code().text_content(text.to_string()));
+                    self.write(self.components.code().child(auk::text(text.to_string())));
                 }
                 Event::Html(html) => {
                     // TODO: Add inline HTML support.
@@ -296,7 +296,7 @@ where
                             self.components
                                 .a()
                                 .href(format!("#{name}"))
-                                .text_content(number.to_string()),
+                                .child(text(number.to_string())),
                         ),
                     );
                 }
@@ -309,7 +309,7 @@ where
 
     pub fn write(&mut self, element: HtmlElement) {
         if let Some(parent) = self.current_element_stack.back_mut() {
-            parent.children_mut().push(element);
+            parent.children_mut().push(element.into());
         } else {
             self.elements.push(element);
         }
@@ -426,7 +426,7 @@ where
                     self.components
                         .sup()
                         .class("footnote-definition-label")
-                        .child(HtmlElement::unstable_raw_text(number.to_string())),
+                        .child(text(number.to_string())),
                 );
             }
         }
@@ -473,6 +473,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use auk::renderer::HtmlElementRenderer;
     use indoc::indoc;
 
     use super::*;
@@ -482,7 +483,11 @@ mod tests {
 
         elements
             .into_iter()
-            .map(|element| element.render_to_string().unwrap())
+            .map(|element| {
+                HtmlElementRenderer::new()
+                    .render_to_string(&element)
+                    .unwrap()
+            })
             .collect::<Vec<_>>()
             .join("")
     }

@@ -74,7 +74,7 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                         .name("viewport")
                         .content("width=device-width, initial-scale=1.0, maximum-scale=1"),
                 )
-                .child(title().text_content(props.title))
+                .child(title().child(text(props.title)))
                 .child(
                     link()
                         .rel("stylesheet")
@@ -102,7 +102,7 @@ fn index(IndexProps { ctx }: IndexProps) -> HtmlElement {
         children: vec![body()
             .child(
                 h1().class(plumage().class("heading").text_center())
-                    .text_content("Razorbill"),
+                    .child("Razorbill"),
             )
             .child(
                 div()
@@ -126,11 +126,11 @@ struct PageListProps<'a> {
 
 fn page_list(PageListProps { heading, pages }: PageListProps) -> HtmlElement {
     div()
-        .child(h2().text_content(heading))
+        .child(h2().child(heading))
         .child(ul().children(pages.into_iter().map(|page| {
             li().child(
                 a().href(page.path.to_string())
-                    .text_content(page.title.as_ref().unwrap()),
+                    .child(page.title.as_ref().unwrap()),
             )
         })))
 }
@@ -150,7 +150,7 @@ fn section(SectionProps { ctx }: SectionProps) -> HtmlElement {
         children: vec![body()
             .child(
                 h1().class(plumage().class("heading").text_center())
-                    .text_content(&title),
+                    .child(&title),
             )
             .child(
                 div()
@@ -158,7 +158,7 @@ fn section(SectionProps { ctx }: SectionProps) -> HtmlElement {
                     .children(section.pages.iter().map(|page| {
                         li().child(
                             a().href(page.path)
-                                .text_content(page.title.clone().unwrap_or_default()),
+                                .child(page.title.clone().unwrap_or_default()),
                         )
                     })),
             )],
@@ -183,17 +183,17 @@ fn page(PageProps { ctx, children }: PageProps) -> HtmlElement {
         children: vec![body()
             .child(
                 h1().class(plumage().class("heading").text_center())
-                    .text_content("Razorbill Blog"),
+                    .child("Razorbill Blog"),
             )
             .children(page.date.as_ref().map(|date| {
                 h3().class(plumage().text_center())
-                    .text_content(format!("{}", date))
+                    .child(format!("{}", date))
             }))
             .child(
                 h3().class(plumage().text_center())
-                    .text_content(format!("path = {}", page.path)),
+                    .child(format!("path = {}", page.path)),
             )
-            .child(h4().class(plumage().text_center()).text_content(format!(
+            .child(h4().class(plumage().text_center()).child(format!(
                 "{} words | {} minutes",
                 page.word_count.0, page.read_time.0
             )))
@@ -219,7 +219,7 @@ fn prose(ProseProps { ctx, children }: ProseProps) -> HtmlElement {
         children: vec![body()
             .child(
                 h1().class(plumage().class("heading").text_center())
-                    .text_content("Razorbill Blog"),
+                    .child("Razorbill Blog"),
             )
             .child(div().class("content").children(children))],
     })
