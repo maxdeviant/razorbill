@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use auk::{HtmlElement, WithChildren};
+use auk::{Element, HtmlElement, WithChildren};
 use pulldown_cmark::{
     self as md, Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag,
 };
@@ -208,7 +208,7 @@ impl Default for MarkdownComponents {
     }
 }
 
-pub fn markdown(text: &str, components: MarkdownComponents) -> Vec<HtmlElement> {
+pub fn markdown(text: &str, components: MarkdownComponents) -> Vec<Element> {
     let mut options = md::Options::empty();
     options.insert(md::Options::ENABLE_TABLES);
     options.insert(md::Options::ENABLE_FOOTNOTES);
@@ -245,7 +245,7 @@ where
 {
     input: I,
     components: MarkdownComponents,
-    elements: Vec<HtmlElement>,
+    elements: Vec<Element>,
     current_element_stack: VecDeque<HtmlElement>,
     table_state: TableState,
     table_alignments: Vec<Alignment>,
@@ -270,7 +270,7 @@ where
         }
     }
 
-    fn run(mut self) -> Vec<HtmlElement> {
+    fn run(mut self) -> Vec<Element> {
         while let Some(event) = self.input.next() {
             match event {
                 Event::Start(tag) => {
@@ -287,9 +287,7 @@ where
                 Event::Code(text) => {
                     self.write(self.components.code().child(escape_html(&text)));
                 }
-                Event::Html(html) => {
-                    // TODO: Add inline HTML support.
-                }
+                Event::Html(html) => self.write_raw_html(&html),
                 Event::SoftBreak => {
                     // TODO: Do we need to do anything here?
                 }
@@ -322,7 +320,15 @@ where
         if let Some(parent) = self.current_element_stack.back_mut() {
             parent.children_mut().push(element.into());
         } else {
-            self.elements.push(element);
+            self.elements.push(element.into());
+        }
+    }
+
+    fn write_raw_html(&mut self, html: &str) {
+        if let Some(parent) = self.current_element_stack.back_mut() {
+            parent.children_mut().push(html.into());
+        } else {
+            self.elements.push(html.into());
         }
     }
 
@@ -517,10 +523,12 @@ mod tests {
 
         elements
             .into_iter()
-            .map(|element| {
-                HtmlElementRenderer::new()
+            .map(|element| match element {
+                // TODO: Need to expose a way to retrieve the text from a `TextElement` in `auk`.
+                Element::Text(element) => "".to_string(),
+                Element::Html(element) => HtmlElementRenderer::new()
                     .render_to_string(&element)
-                    .unwrap()
+                    .unwrap(),
             })
             .collect::<Vec<_>>()
             .join("")
