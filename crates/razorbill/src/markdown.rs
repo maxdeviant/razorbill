@@ -367,11 +367,17 @@ where
             },
             Tag::BlockQuote => self.push(self.components.blockquote()),
             Tag::CodeBlock(kind) => match kind {
-                CodeBlockKind::Indented => {
-                    self.push(self.components.pre());
-                    self.push(self.components.code());
-                }
                 CodeBlockKind::Fenced(info) => {
+                    self.push(self.components.pre());
+
+                    let language = info.split(' ').next().unwrap();
+                    if language.is_empty() {
+                        self.push(self.components.code());
+                    } else {
+                        self.push(self.components.code().class(format!("language-{language}")));
+                    }
+                }
+                CodeBlockKind::Indented => {
                     self.push(self.components.pre());
                     self.push(self.components.code());
                 }
