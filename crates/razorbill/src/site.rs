@@ -6,6 +6,7 @@ use std::sync::{Arc, RwLock};
 use std::{io, thread};
 
 use auk::renderer::HtmlElementRenderer;
+use auk::visitor::MutVisitor;
 use auk::HtmlElement;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
@@ -84,6 +85,29 @@ pub enum ServeSiteError {
 
 static SITE_CONTENT: Lazy<Arc<RwLock<HashMap<String, String>>>> =
     Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
+
+struct LinkReplacer<'site> {
+    site: &'site Site,
+}
+
+impl<'site> MutVisitor for LinkReplacer<'site> {
+    type Error = ();
+
+    fn visit_attr(&mut self, name: &str, value: &mut String) -> Result<(), Self::Error> {
+        if name == "href" && value.starts_with("@/") {
+            *value = format!(
+                "{}/{}",
+                self.site.base_url,
+                value
+                    .replacen("@/", "", 1)
+                    .replace("_index.md", "")
+                    .replace(".md", "")
+            );
+        }
+
+        Ok(())
+    }
+}
 
 struct BuildSiteParams {
     base_url: String,
@@ -242,7 +266,12 @@ impl Site {
                 section: SectionToRender::from_section(section, &self.pages),
             };
 
-            let rendered = HtmlElementRenderer::new().render_to_string(&section_template(&ctx))?;
+            let mut link_replacer = LinkReplacer { site: self };
+
+            let mut rendered_section = section_template(&ctx);
+            link_replacer.visit(&mut rendered_section).unwrap();
+
+            let rendered = HtmlElementRenderer::new().render_to_string(&rendered_section)?;
 
             storage
                 .store_rendered_section(&section, rendered)
@@ -273,7 +302,12 @@ impl Site {
                 page: PageToRender::from_page(page),
             };
 
-            let rendered = HtmlElementRenderer::new().render_to_string(&page_template(&ctx))?;
+            let mut link_replacer = LinkReplacer { site: self };
+
+            let mut rendered_page = page_template(&ctx);
+            link_replacer.visit(&mut rendered_page).unwrap();
+
+            let rendered = HtmlElementRenderer::new().render_to_string(&rendered_page)?;
 
             storage
                 .store_rendered_page(&page, rendered)
