@@ -14,6 +14,7 @@ pub struct Page {
     pub meta: PageFrontMatter,
     pub file: FileInfo,
     pub path: PagePath,
+    pub ancestors: Vec<PathBuf>,
     pub slug: String,
     pub raw_content: String,
     pub word_count: WordCount,
@@ -92,6 +93,7 @@ impl Page {
         root_path: impl AsRef<Path>,
         filepath: &Path,
     ) -> Result<Self, ParsePageError> {
+        let root_path = root_path.as_ref();
         let (front_matter, content) =
             parse_front_matter::<PageFrontMatter>(text).ok_or_else(|| {
                 ParsePageError::InvalidFrontMatter {
@@ -101,7 +103,8 @@ impl Page {
 
         let file = FileInfo {
             path: filepath.to_owned(),
-            parent: filepath.parent().unwrap_or(root_path.as_ref()).to_owned(),
+            parent: filepath.parent().unwrap_or(root_path).to_owned(),
+            components: FileInfo::components(root_path, filepath),
         };
 
         let slug = front_matter
@@ -117,6 +120,7 @@ impl Page {
             meta: front_matter,
             file,
             path,
+            ancestors: Vec::new(),
             slug,
             raw_content: content.to_string(),
             word_count: reading_metrics.word_count,

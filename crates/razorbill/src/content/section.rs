@@ -51,6 +51,7 @@ pub struct Section {
 pub struct SectionFrontMatter {
     pub title: Option<String>,
     pub template: Option<String>,
+    pub page_template: Option<String>,
 
     #[serde(default)]
     pub sort_by: MaybeSortBy,
@@ -103,6 +104,7 @@ impl Section {
         root_path: impl AsRef<Path>,
         filepath: &Path,
     ) -> Result<Self, ParseSectionError> {
+        let root_path = root_path.as_ref();
         let (front_matter, content) =
             parse_front_matter::<SectionFrontMatter>(text).ok_or_else(|| {
                 ParseSectionError::InvalidFrontMatter {
@@ -112,7 +114,8 @@ impl Section {
 
         let file = FileInfo {
             path: filepath.to_owned(),
-            parent: filepath.parent().unwrap_or(root_path.as_ref()).to_owned(),
+            parent: filepath.parent().unwrap_or(root_path).to_owned(),
+            components: FileInfo::components(root_path, filepath),
         };
 
         let path = SectionPath::from_file_path(root_path, &file.path).unwrap();

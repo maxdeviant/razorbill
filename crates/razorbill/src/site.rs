@@ -189,13 +189,55 @@ impl Site {
             self.pages.insert(page.file.path.clone(), page);
         }
 
+        let mut ancestors = HashMap::new();
+
+        for (_path, section) in &self.sections {
+            if section.file.components.is_empty() {
+                ancestors.insert(section.file.path.clone(), Vec::new());
+                continue;
+            }
+
+            let mut current_path = self.content_path.clone();
+            let mut section_ancestors = vec!["_index.md".into()];
+            for component in &section.file.components {
+                current_path = current_path.join(component);
+                if current_path == section.file.parent {
+                    continue;
+                }
+
+                if let Some(ancestor) = self.sections.get(&current_path.join("_index.md")) {
+                    section_ancestors.push(ancestor.file.path.clone());
+                }
+            }
+
+            ancestors.insert(section.file.path.clone(), section_ancestors);
+        }
+
         for (path, page) in self.pages.iter_mut() {
             let mut parent_section_path = page.file.parent.join("_index.md");
 
             while let Some(parent_section) = self.sections.get_mut(&parent_section_path) {
+                let is_transparent = parent_section.meta.transparent;
+
                 parent_section.pages.push(path.clone());
 
-                if !parent_section.meta.transparent {
+                page.ancestors = ancestors
+                    .get(&parent_section_path)
+                    .cloned()
+                    .unwrap_or_default();
+                page.ancestors.push(parent_section.file.path.clone());
+
+                if page.meta.template.is_none() {
+                    for ancestor in page.ancestors.iter().rev() {
+                        let section = self.sections.get(ancestor).unwrap();
+                        if let Some(template) = section.meta.page_template.as_ref() {
+                            page.meta.template = Some(template.clone());
+                            break;
+                        }
+                    }
+                }
+
+                if !is_transparent {
                     break;
                 }
 
