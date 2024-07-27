@@ -26,7 +26,7 @@ use walkdir::WalkDir;
 use ws::{Message, Sender, WebSocket};
 
 use crate::content::{
-    sort_pages_by, Page, ParsePageError, ParseSectionError, Section, SectionPath,
+    sort_pages_by, Page, ParsePageError, ParseSectionError, Repository, Section, SectionPath,
 };
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
@@ -124,8 +124,7 @@ pub struct Site {
     sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
-    sections: HashMap<PathBuf, Section>,
-    pages: HashMap<PathBuf, Page>,
+    repository: Repository,
     is_serving: bool,
 }
 
@@ -136,16 +135,16 @@ impl Site {
 
     fn from_params(params: BuildSiteParams) -> Self {
         let root_path = params.root_path;
+        let content_path = root_path.join("content");
 
         Site {
             base_url: params.base_url,
             root_path: root_path.to_owned(),
-            content_path: root_path.join("content"),
+            content_path: content_path.clone(),
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
             output_path: root_path.join("public"),
             templates: params.templates,
-            sections: HashMap::new(),
-            pages: HashMap::new(),
+            repository: Repository::new(content_path),
             is_serving: false,
         }
     }
@@ -183,89 +182,14 @@ impl Site {
         }
 
         for section in sections {
-            self.sections.insert(section.file.path.clone(), section);
+            self.repository.add_section(section);
         }
 
         for page in pages {
-            self.pages.insert(page.file.path.clone(), page);
+            self.repository.add_page(page);
         }
 
-        let mut ancestors = HashMap::new();
-
-        for (_path, section) in &self.sections {
-            if section.file.components.is_empty() {
-                ancestors.insert(section.file.path.clone(), Vec::new());
-                continue;
-            }
-
-            let mut current_path = self.content_path.clone();
-            let mut section_ancestors = vec![current_path.join("_index.md")];
-            for component in &section.file.components {
-                current_path = current_path.join(component);
-                if current_path == section.file.parent {
-                    continue;
-                }
-
-                if let Some(ancestor) = self.sections.get(&current_path.join("_index.md")) {
-                    section_ancestors.push(ancestor.file.path.clone());
-                }
-            }
-
-            ancestors.insert(section.file.path.clone(), section_ancestors);
-        }
-
-        for (path, page) in self.pages.iter_mut() {
-            let mut parent_section_path = page.file.parent.join("_index.md");
-
-            while let Some(parent_section) = self.sections.get_mut(&parent_section_path) {
-                let is_transparent = parent_section.meta.transparent;
-
-                parent_section.pages.push(path.clone());
-
-                page.ancestors = ancestors
-                    .get(&parent_section_path)
-                    .cloned()
-                    .unwrap_or_default();
-                page.ancestors.push(parent_section.file.path.clone());
-
-                if page.meta.template.is_none() {
-                    for ancestor in page.ancestors.iter().rev() {
-                        let section = self.sections.get(ancestor).unwrap();
-                        if let Some(template) = section.meta.page_template.as_ref() {
-                            page.meta.template = Some(template.clone());
-                            break;
-                        }
-                    }
-                }
-
-                if !is_transparent {
-                    break;
-                }
-
-                match parent_section_path.clone().parent().unwrap().parent() {
-                    Some(parent) => parent_section_path = parent.join("_index.md"),
-                    None => break,
-                }
-            }
-        }
-
-        for (_path, section) in &mut self.sections {
-            let pages = section
-                .pages
-                .iter()
-                .map(|path| &self.pages[path])
-                .collect::<Vec<_>>();
-
-            let (sorted_pages, unsorted_pages) = match section.meta.sort_by.into() {
-                Some(sort_by) => sort_pages_by(sort_by, pages),
-                None => continue,
-            };
-
-            let mut reordered_pages = sorted_pages;
-            reordered_pages.extend(unsorted_pages);
-
-            section.pages = reordered_pages;
-        }
+        self.repository.populate();
 
         Ok(())
     }
@@ -279,7 +203,7 @@ impl Site {
     }
 
     fn render_to(&mut self, storage: impl Store) -> Result<(), RenderSiteError> {
-        for section in self.sections.values() {
+        for section in self.repository.sections.values() {
             let section_template = if section.path == SectionPath("/_index".to_string()) {
                 &self.templates.index
             } else {
@@ -303,10 +227,10 @@ impl Site {
                 base: BaseRenderContext {
                     base_url: &self.base_url,
                     content_path: &self.content_path,
-                    sections: &self.sections,
-                    pages: &self.pages,
+                    sections: &self.repository.sections,
+                    pages: &self.repository.pages,
                 },
-                section: SectionToRender::from_section(section, &self.pages),
+                section: SectionToRender::from_section(section, &self.repository.pages),
             };
 
             let mut link_replacer = LinkReplacer { site: self };
@@ -321,7 +245,7 @@ impl Site {
                 .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
         }
 
-        for page in self.pages.values() {
+        for page in self.repository.pages.values() {
             let template_name = page
                 .meta
                 .template
@@ -339,8 +263,8 @@ impl Site {
                 base: BaseRenderContext {
                     base_url: &self.base_url,
                     content_path: &self.content_path,
-                    sections: &self.sections,
-                    pages: &self.pages,
+                    sections: &self.repository.sections,
+                    pages: &self.repository.pages,
                 },
                 page: PageToRender::from_page(page),
             };
