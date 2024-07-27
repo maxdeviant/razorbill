@@ -29,7 +29,7 @@ impl ContentAggregator {
         self.pages.insert(page.file.path.clone(), page);
     }
 
-    /// Populates the contents of the repository.
+    /// Aggregates and returns all of the sections and pages in the aggregate.
     pub fn aggregate(mut self) -> (Sections, Pages) {
         let ancestors = self.build_ancestors();
 
@@ -115,5 +115,102 @@ impl ContentAggregator {
         }
 
         ancestors
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+
+    use crate::content::{
+        FileInfo, MaybeSortBy, PageFrontMatter, PagePath, ReadTime, SectionFrontMatter,
+        SectionPath, SortBy, WordCount,
+    };
+
+    use super::*;
+
+    fn make_section(filepath: &str, sort_by: MaybeSortBy) -> Section {
+        let root_path = PathBuf::new();
+        let file = FileInfo::new(&root_path, filepath);
+
+        Section {
+            meta: SectionFrontMatter {
+                sort_by,
+                ..Default::default()
+            },
+            path: SectionPath::from_file_path(root_path, &file.path).unwrap(),
+            file,
+            raw_content: String::new(),
+            word_count: WordCount(0),
+            read_time: ReadTime(0),
+            pages: Vec::new(),
+        }
+    }
+
+    fn make_page(filepath: &str, date: &str) -> Page {
+        let root_path = PathBuf::new();
+        let file = FileInfo::new(&root_path, filepath);
+
+        Page {
+            meta: PageFrontMatter {
+                date: Some(date.to_string()),
+                ..Default::default()
+            },
+            path: PagePath::from_file_path(root_path, &file.path).unwrap(),
+            file,
+            ancestors: Vec::new(),
+            slug: String::new(),
+            raw_content: String::new(),
+            word_count: WordCount(0),
+            read_time: ReadTime(0),
+        }
+    }
+
+    #[test]
+    fn test_aggregate() {
+        let mut aggregator = ContentAggregator::new(PathBuf::from("content"));
+
+        let sections = vec![
+            ("content/_index.md", MaybeSortBy::None),
+            ("content/blog/_index.md", MaybeSortBy::SortBy(SortBy::Date)),
+        ];
+        let pages = vec![
+            ("content/blog/2023-07-01-hello-world.md", "2023-07-01"),
+            ("content/blog/2023-12-31-year-in-review.md", "2023-12-31"),
+            ("content/blog/2024-01-01-happy-new-year.md", "2024-01-01"),
+        ];
+
+        for (filepath, sort_by) in sections {
+            aggregator.add_section(make_section(filepath, sort_by))
+        }
+
+        for (filepath, date) in pages {
+            aggregator.add_page(make_page(filepath, date));
+        }
+
+        let (sections, pages) = aggregator.aggregate();
+
+        let blog_section = sections
+            .get(&PathBuf::from("content/blog/_index.md"))
+            .unwrap();
+        assert_eq!(
+            blog_section.pages,
+            vec![
+                PathBuf::from("content/blog/2024-01-01-happy-new-year.md"),
+                PathBuf::from("content/blog/2023-12-31-year-in-review.md"),
+                PathBuf::from("content/blog/2023-07-01-hello-world.md"),
+            ]
+        );
+
+        let hello_world_page = pages
+            .get(&PathBuf::from("content/blog/2023-07-01-hello-world.md"))
+            .unwrap();
+        assert_eq!(
+            hello_world_page.ancestors,
+            vec![
+                PathBuf::from("content/_index.md"),
+                PathBuf::from("content/blog/_index.md")
+            ]
+        );
     }
 }
