@@ -22,23 +22,25 @@ pub struct ShortcodeCall {
 }
 
 pub fn markdown_with_shortcodes(
-    text: &str,
+    input: &str,
     components: MarkdownComponents,
     shortcodes: HashMap<String, Shortcode>,
 ) -> Vec<Element> {
-    let mut text = text.to_string();
+    let mut shortcode_calls = extract_shortcodes(&input);
 
-    let shortcode_calls = extract_shortcodes(&text);
+    let mut output = String::with_capacity(input.len());
+    let mut cursor = 0;
 
-    for call in &shortcode_calls {
-        if let Some(_shortcode) = shortcodes.get(&call.name) {
-            text.replace_range(call.span.clone(), SHORTCODE_PLACEHOLDER);
-        } else {
-            eprintln!("Unknown shortcode: '{}'", call.name);
-        }
+    for call in &mut shortcode_calls {
+        output.push_str(&input[cursor..call.span.start]);
+        output.push_str(SHORTCODE_PLACEHOLDER);
+        cursor = call.span.end;
+        call.span = output.len() - SHORTCODE_PLACEHOLDER.len()..output.len();
     }
 
-    let mut elements = markdown(&text, components);
+    output.push_str(&input[cursor..]);
+
+    let mut elements = markdown(&output, components);
     let mut shortcode_replacer = ShortcodeReplacer {
         shortcodes,
         calls: shortcode_calls.into_iter(),
