@@ -9,6 +9,17 @@ use crate::content::{
     AVERAGE_ADULT_WPM,
 };
 
+#[derive(Debug)]
+pub struct Section {
+    pub meta: SectionFrontMatter,
+    pub file: FileInfo,
+    pub path: SectionPath,
+    pub raw_content: String,
+    pub word_count: WordCount,
+    pub read_time: ReadTime,
+    pub pages: Vec<PathBuf>,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct SectionPath(pub(crate) String);
 
@@ -34,17 +45,6 @@ impl SectionPath {
             Ok(Self(format!("/{parent}/{slug}")))
         }
     }
-}
-
-#[derive(Debug)]
-pub struct Section {
-    pub meta: SectionFrontMatter,
-    pub file: FileInfo,
-    pub path: SectionPath,
-    pub raw_content: String,
-    pub word_count: WordCount,
-    pub read_time: ReadTime,
-    pub pages: Vec<PathBuf>,
 }
 
 #[derive(Debug, Default, Deserialize)]
