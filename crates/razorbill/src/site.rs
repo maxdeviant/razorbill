@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::marker::PhantomData;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
@@ -567,43 +568,70 @@ impl Site {
     }
 }
 
-pub struct SiteBuilder<T> {
-    state: T,
+pub struct SiteBuilder<State> {
+    state: PhantomData<State>,
+    root_path: PathBuf,
+    base_url: String,
+    templates: Templates,
+    sass_path: Option<PathBuf>,
+}
+
+impl<State> SiteBuilder<State> {
+    fn coerce<NewState>(self) -> SiteBuilder<NewState> {
+        SiteBuilder {
+            state: PhantomData,
+            root_path: self.root_path,
+            base_url: self.base_url,
+            templates: self.templates,
+            sass_path: self.sass_path,
+        }
+    }
+
+    fn build_site(self) -> Site {
+        Site::from_params(BuildSiteParams {
+            base_url: self.base_url,
+            root_path: self.root_path,
+            sass_path: self.sass_path,
+            templates: self.templates,
+        })
+    }
 }
 
 impl SiteBuilder<()> {
     pub fn new() -> Self {
-        Self { state: () }
+        Self {
+            state: PhantomData,
+            root_path: PathBuf::default(),
+            base_url: String::default(),
+            templates: Templates {
+                index: Arc::new(|_| auk::div()),
+                section: HashMap::default(),
+                page: HashMap::default(),
+            },
+            sass_path: None,
+        }
     }
 
     pub fn root(self, root_path: impl AsRef<Path>) -> SiteBuilder<WithRootPath> {
         SiteBuilder {
-            state: WithRootPath {
-                root_path: root_path.as_ref().to_owned(),
-            },
+            root_path: root_path.as_ref().to_owned(),
+            ..self.coerce()
         }
     }
 }
 
-pub struct WithRootPath {
-    root_path: PathBuf,
-}
+pub struct WithRootPath;
 
 impl SiteBuilder<WithRootPath> {
     pub fn base_url(self, base_url: impl Into<String>) -> SiteBuilder<WithBaseUrl> {
         SiteBuilder {
-            state: WithBaseUrl {
-                with_root_path: self.state,
-                base_url: base_url.into(),
-            },
+            base_url: base_url.into(),
+            ..self.coerce()
         }
     }
 }
 
-pub struct WithBaseUrl {
-    with_root_path: WithRootPath,
-    base_url: String,
-}
+pub struct WithBaseUrl;
 
 impl SiteBuilder<WithBaseUrl> {
     pub fn templates(
@@ -613,28 +641,20 @@ impl SiteBuilder<WithBaseUrl> {
         page: impl Fn(&RenderPageContext) -> HtmlElement + Send + Sync + 'static,
     ) -> SiteBuilder<WithTemplates> {
         SiteBuilder {
-            state: WithTemplates {
-                with_base_url: self.state,
-                templates: Templates {
-                    index: Arc::new(index),
-                    section: HashMap::from_iter([(
-                        TemplateKey::Default,
-                        Arc::new(section) as RenderSection,
-                    )]),
-                    page: HashMap::from_iter([(
-                        TemplateKey::Default,
-                        Arc::new(page) as RenderPage,
-                    )]),
-                },
+            templates: Templates {
+                index: Arc::new(index),
+                section: HashMap::from_iter([(
+                    TemplateKey::Default,
+                    Arc::new(section) as RenderSection,
+                )]),
+                page: HashMap::from_iter([(TemplateKey::Default, Arc::new(page) as RenderPage)]),
             },
+            ..self.coerce()
         }
     }
 }
 
-pub struct WithTemplates {
-    with_base_url: WithBaseUrl,
-    templates: Templates,
-}
+pub struct WithTemplates;
 
 impl SiteBuilder<WithTemplates> {
     pub fn add_section_template(
@@ -642,8 +662,7 @@ impl SiteBuilder<WithTemplates> {
         name: impl Into<String>,
         template: impl Fn(&RenderSectionContext) -> HtmlElement + Send + Sync + 'static,
     ) -> Self {
-        self.state
-            .templates
+        self.templates
             .section
             .insert(TemplateKey::Custom(name.into()), Arc::new(template));
         self
@@ -654,8 +673,7 @@ impl SiteBuilder<WithTemplates> {
         name: impl Into<String>,
         template: impl Fn(&RenderPageContext) -> HtmlElement + Send + Sync + 'static,
     ) -> Self {
-        self.state
-            .templates
+        self.templates
             .page
             .insert(TemplateKey::Custom(name.into()), Arc::new(template));
         self
@@ -663,40 +681,20 @@ impl SiteBuilder<WithTemplates> {
 
     pub fn with_sass(self, sass_path: impl AsRef<Path>) -> SiteBuilder<WithSass> {
         SiteBuilder {
-            state: WithSass {
-                with_templates: self.state,
-                sass_path: sass_path.as_ref().to_owned(),
-            },
+            sass_path: Some(sass_path.as_ref().to_owned()),
+            ..self.coerce()
         }
     }
 
     pub fn build(self) -> Site {
-        Site::from_params(BuildSiteParams {
-            base_url: self.state.with_base_url.base_url,
-            root_path: self.state.with_base_url.with_root_path.root_path,
-            sass_path: None,
-            templates: self.state.templates,
-        })
+        self.build_site()
     }
 }
 
-pub struct WithSass {
-    with_templates: WithTemplates,
-    sass_path: PathBuf,
-}
+pub struct WithSass;
 
 impl SiteBuilder<WithSass> {
     pub fn build(self) -> Site {
-        Site::from_params(BuildSiteParams {
-            base_url: self.state.with_templates.with_base_url.base_url,
-            root_path: self
-                .state
-                .with_templates
-                .with_base_url
-                .with_root_path
-                .root_path,
-            sass_path: Some(self.state.sass_path),
-            templates: self.state.with_templates.templates,
-        })
+        self.build_site()
     }
 }
