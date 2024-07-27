@@ -199,7 +199,7 @@ impl Site {
             }
 
             let mut current_path = self.content_path.clone();
-            let mut section_ancestors = vec!["_index.md".into()];
+            let mut section_ancestors = vec![current_path.join("_index.md")];
             for component in &section.file.components {
                 current_path = current_path.join(component);
                 if current_path == section.file.parent {
