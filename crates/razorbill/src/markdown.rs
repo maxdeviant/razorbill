@@ -1,9 +1,13 @@
+mod shortcodes;
+
 use std::collections::{HashMap, VecDeque};
 
 use auk::{Element, HtmlElement, WithChildren};
 use pulldown_cmark::{
     self as md, Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag,
 };
+
+pub use shortcodes::*;
 
 pub struct MarkdownComponents {
     pub div: Box<dyn Fn() -> HtmlElement>,
@@ -281,7 +285,7 @@ where
                 }
                 Event::Text(text) => {
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
-                        element.children_mut().push(escape_html(&text).into());
+                        element.extend([escape_html(&text).into()]);
                     }
                 }
                 Event::Code(text) => {
@@ -318,7 +322,7 @@ where
 
     fn write(&mut self, element: HtmlElement) {
         if let Some(parent) = self.current_element_stack.back_mut() {
-            parent.children_mut().push(element.into());
+            parent.extend([element.into()]);
         } else {
             self.elements.push(element.into());
         }
@@ -326,7 +330,7 @@ where
 
     fn write_raw_html(&mut self, html: &str) {
         if let Some(parent) = self.current_element_stack.back_mut() {
-            parent.children_mut().push(html.into());
+            parent.extend([html.into()]);
         } else {
             self.elements.push(html.into());
         }

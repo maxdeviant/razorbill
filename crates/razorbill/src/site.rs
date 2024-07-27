@@ -29,6 +29,7 @@ use crate::content::{
     ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
     Sections,
 };
+use crate::markdown::Shortcode;
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
 };
@@ -116,6 +117,7 @@ struct BuildSiteParams {
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
     templates: Templates,
+    shortcodes: HashMap<String, Shortcode>,
 }
 
 pub struct Site {
@@ -125,6 +127,7 @@ pub struct Site {
     sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
+    shortcodes: HashMap<String, Shortcode>,
     sections: Sections,
     pages: Pages,
     is_serving: bool,
@@ -145,6 +148,7 @@ impl Site {
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
             output_path: root_path.join("public"),
             templates: params.templates,
+            shortcodes: params.shortcodes,
             sections: Sections::default(),
             pages: Pages::default(),
             is_serving: false,
@@ -503,6 +507,7 @@ pub struct SiteBuilder<State> {
     root_path: PathBuf,
     base_url: String,
     templates: Templates,
+    shortcodes: HashMap<String, Shortcode>,
     sass_path: Option<PathBuf>,
 }
 
@@ -513,6 +518,7 @@ impl<State> SiteBuilder<State> {
             root_path: self.root_path,
             base_url: self.base_url,
             templates: self.templates,
+            shortcodes: self.shortcodes,
             sass_path: self.sass_path,
         }
     }
@@ -523,6 +529,7 @@ impl<State> SiteBuilder<State> {
             root_path: self.root_path,
             sass_path: self.sass_path,
             templates: self.templates,
+            shortcodes: self.shortcodes,
         })
     }
 }
@@ -531,13 +538,14 @@ impl SiteBuilder<()> {
     pub fn new() -> Self {
         Self {
             state: PhantomData,
-            root_path: PathBuf::default(),
-            base_url: String::default(),
+            root_path: PathBuf::new(),
+            base_url: String::new(),
             templates: Templates {
                 index: Arc::new(|_| auk::div()),
-                section: HashMap::default(),
-                page: HashMap::default(),
+                section: HashMap::new(),
+                page: HashMap::new(),
             },
+            shortcodes: HashMap::new(),
             sass_path: None,
         }
     }
@@ -606,6 +614,20 @@ impl SiteBuilder<WithTemplates> {
         self.templates
             .page
             .insert(TemplateKey::Custom(name.into()), Arc::new(template));
+        self
+    }
+
+    pub fn add_shortcode(
+        mut self,
+        name: impl Into<String>,
+        render: impl Fn() -> HtmlElement + Send + Sync + 'static,
+    ) -> Self {
+        self.shortcodes.insert(
+            name.into(),
+            Shortcode {
+                render: Arc::new(render),
+            },
+        );
         self
     }
 

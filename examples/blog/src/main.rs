@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use anyhow::Result;
 use auk::*;
 use clap::{Parser, Subcommand};
-use razorbill::markdown::{markdown, MarkdownComponents};
+use razorbill::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
 use razorbill::render::{PageToRender, RenderPageContext, RenderSectionContext};
 use razorbill::{plumage, Site};
 
@@ -43,6 +46,9 @@ async fn main() -> Result<()> {
                     text: &ctx.page.raw_content,
                 })],
             })
+        })
+        .add_shortcode("say_hello", || {
+            div().class("heading").child(text("Hello, world"))
         })
         .with_sass("sass")
         .build();
@@ -231,12 +237,18 @@ struct PostProps<'a> {
 }
 
 fn post(PostProps { text }: PostProps) -> HtmlElement {
-    div().children(markdown(
+    div().children(markdown_with_shortcodes(
         &text,
         MarkdownComponents {
             p: Box::new(post_paragraph),
             ..Default::default()
         },
+        HashMap::from_iter([(
+            "say_hello".into(),
+            Shortcode {
+                render: Arc::new(|| div().class("heading").child("Hey there!")),
+            },
+        )]),
     ))
 }
 
