@@ -4,13 +4,13 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::content::{Page, ReadTime, Section, WordCount};
+use crate::content::{Page, Pages, ReadTime, Section, Sections, WordCount};
 
 pub struct BaseRenderContext<'a> {
     pub(crate) base_url: &'a str,
     pub(crate) content_path: &'a Path,
-    pub(crate) sections: &'a HashMap<PathBuf, Section>,
-    pub(crate) pages: &'a HashMap<PathBuf, Page>,
+    pub(crate) sections: &'a Sections,
+    pub(crate) pages: &'a Pages,
 }
 
 impl<'a> BaseRenderContext<'a> {

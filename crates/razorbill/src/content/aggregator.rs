@@ -1,37 +1,36 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::content::{sort_pages_by, Page, Section};
+use crate::content::{sort_pages_by, Page, Pages, Section, Sections};
 
-/// A repository for the content of a site.
-pub struct Repository {
+pub struct ContentAggregator {
     content_path: PathBuf,
-    pub(crate) sections: HashMap<PathBuf, Section>,
-    pub(crate) pages: HashMap<PathBuf, Page>,
+    sections: Sections,
+    pages: Pages,
 }
 
-impl Repository {
-    /// Returns a new [`Repository`].
+impl ContentAggregator {
+    /// Returns a new [`ContentAggregator`].
     pub fn new(content_path: PathBuf) -> Self {
         Self {
             content_path,
-            sections: HashMap::new(),
-            pages: HashMap::new(),
+            sections: Sections::default(),
+            pages: Pages::default(),
         }
     }
 
-    /// Adds the given [`Section`] to the repository.
+    /// Adds the given [`Section`] to the aggregate.
     pub fn add_section(&mut self, section: Section) {
         self.sections.insert(section.file.path.clone(), section);
     }
 
-    /// Adds the given [`Page`] to the repository.
+    /// Adds the given [`Page`] to the aggregate.
     pub fn add_page(&mut self, page: Page) {
         self.pages.insert(page.file.path.clone(), page);
     }
 
     /// Populates the contents of the repository.
-    pub fn populate(&mut self) {
+    pub fn aggregate(mut self) -> (Sections, Pages) {
         let ancestors = self.build_ancestors();
 
         for (path, page) in self.pages.iter_mut() {
@@ -69,7 +68,7 @@ impl Repository {
             }
         }
 
-        for (_path, section) in &mut self.sections {
+        for (_path, section) in self.sections.iter_mut() {
             let pages = section
                 .pages
                 .iter()
@@ -86,12 +85,14 @@ impl Repository {
 
             section.pages = reordered_pages;
         }
+
+        (self.sections, self.pages)
     }
 
     fn build_ancestors(&self) -> HashMap<PathBuf, Vec<PathBuf>> {
         let mut ancestors = HashMap::new();
 
-        for (_path, section) in &self.sections {
+        for (_path, section) in self.sections.iter() {
             if section.file.components.is_empty() {
                 ancestors.insert(section.file.path.clone(), Vec::new());
                 continue;

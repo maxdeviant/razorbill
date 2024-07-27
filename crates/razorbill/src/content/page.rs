@@ -48,7 +48,7 @@ impl PagePath {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct PageFrontMatter {
     pub title: Option<String>,
     pub slug: Option<String>,
@@ -101,12 +101,7 @@ impl Page {
                 }
             })?;
 
-        let file = FileInfo {
-            path: filepath.to_owned(),
-            parent: filepath.parent().unwrap_or(root_path).to_owned(),
-            components: FileInfo::components(root_path, filepath),
-        };
-
+        let file = FileInfo::new(root_path, filepath);
         let slug = front_matter
             .slug
             .clone()

@@ -26,7 +26,8 @@ use walkdir::WalkDir;
 use ws::{Message, Sender, WebSocket};
 
 use crate::content::{
-    sort_pages_by, Page, ParsePageError, ParseSectionError, Repository, Section, SectionPath,
+    ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
+    Sections,
 };
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
@@ -124,7 +125,8 @@ pub struct Site {
     sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
-    repository: Repository,
+    sections: Sections,
+    pages: Pages,
     is_serving: bool,
 }
 
@@ -135,16 +137,16 @@ impl Site {
 
     fn from_params(params: BuildSiteParams) -> Self {
         let root_path = params.root_path;
-        let content_path = root_path.join("content");
 
         Site {
             base_url: params.base_url,
             root_path: root_path.to_owned(),
-            content_path: content_path.clone(),
+            content_path: root_path.join("content"),
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
             output_path: root_path.join("public"),
             templates: params.templates,
-            repository: Repository::new(content_path),
+            sections: Sections::default(),
+            pages: Pages::default(),
             is_serving: false,
         }
     }
@@ -181,15 +183,19 @@ impl Site {
             }
         }
 
+        let mut aggregator = ContentAggregator::new(self.content_path.clone());
+
         for section in sections {
-            self.repository.add_section(section);
+            aggregator.add_section(section);
         }
 
         for page in pages {
-            self.repository.add_page(page);
+            aggregator.add_page(page);
         }
 
-        self.repository.populate();
+        let (sections, pages) = aggregator.aggregate();
+        self.sections = sections;
+        self.pages = pages;
 
         Ok(())
     }
@@ -203,7 +209,7 @@ impl Site {
     }
 
     fn render_to(&mut self, storage: impl Store) -> Result<(), RenderSiteError> {
-        for section in self.repository.sections.values() {
+        for section in self.sections.values() {
             let section_template = if section.path == SectionPath("/_index".to_string()) {
                 &self.templates.index
             } else {
@@ -227,10 +233,10 @@ impl Site {
                 base: BaseRenderContext {
                     base_url: &self.base_url,
                     content_path: &self.content_path,
-                    sections: &self.repository.sections,
-                    pages: &self.repository.pages,
+                    sections: &self.sections,
+                    pages: &self.pages,
                 },
-                section: SectionToRender::from_section(section, &self.repository.pages),
+                section: SectionToRender::from_section(section, &self.pages),
             };
 
             let mut link_replacer = LinkReplacer { site: self };
@@ -245,7 +251,7 @@ impl Site {
                 .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
         }
 
-        for page in self.repository.pages.values() {
+        for page in self.pages.values() {
             let template_name = page
                 .meta
                 .template
@@ -263,8 +269,8 @@ impl Site {
                 base: BaseRenderContext {
                     base_url: &self.base_url,
                     content_path: &self.content_path,
-                    sections: &self.repository.sections,
-                    pages: &self.repository.pages,
+                    sections: &self.sections,
+                    pages: &self.pages,
                 },
                 page: PageToRender::from_page(page),
             };

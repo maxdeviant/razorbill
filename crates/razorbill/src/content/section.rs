@@ -47,7 +47,7 @@ pub struct Section {
     pub pages: Vec<PathBuf>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct SectionFrontMatter {
     pub title: Option<String>,
     pub template: Option<String>,
@@ -112,12 +112,7 @@ impl Section {
                 }
             })?;
 
-        let file = FileInfo {
-            path: filepath.to_owned(),
-            parent: filepath.parent().unwrap_or(root_path).to_owned(),
-            components: FileInfo::components(root_path, filepath),
-        };
-
+        let file = FileInfo::new(root_path, filepath);
         let path = SectionPath::from_file_path(root_path, &file.path).unwrap();
 
         let reading_metrics = ReadingMetrics::for_content(&content, AVERAGE_ADULT_WPM);

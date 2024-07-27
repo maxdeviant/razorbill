@@ -8,7 +8,17 @@ pub struct FileInfo {
 }
 
 impl FileInfo {
-    pub fn components(root_path: impl AsRef<Path>, path: impl AsRef<Path>) -> Vec<String> {
+    pub fn new(root_path: impl AsRef<Path>, path: impl AsRef<Path>) -> Self {
+        let root_path = root_path.as_ref();
+        let path = path.as_ref();
+        Self {
+            path: path.to_owned(),
+            parent: path.parent().unwrap_or(root_path).to_owned(),
+            components: Self::components(root_path, path),
+        }
+    }
+
+    fn components(root_path: impl AsRef<Path>, path: impl AsRef<Path>) -> Vec<String> {
         let path = path.as_ref();
         path.strip_prefix(root_path)
             .unwrap_or(path)

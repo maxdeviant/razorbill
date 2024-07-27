@@ -6,6 +6,7 @@ members = ["crates/*", "examples/*"]
 anyhow = "1.0.78"
 auk = { git = "https://github.com/maxdeviant/auk.git", rev = "56c80e80112744740be1969c89fdd34db4be6f64" }
 clap = "4.4.13"
+derive_more = "0.99.18"
 grass = "0.13.1"
 http-body-util = "0.1.0"
 hyper = "1.1.0"
