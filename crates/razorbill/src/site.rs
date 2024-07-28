@@ -423,13 +423,13 @@ impl Site {
                             .unwrap());
                     }
 
+                    let extension = path.rsplit_once('.').map(|(_, extension)| extension);
+
                     if let Some(content) = SITE_CONTENT.read().unwrap().get(path) {
-                        let content_type = if path.ends_with(".css") {
-                            "text/css"
-                        } else if path.ends_with(".xml") {
-                            "application/xml"
-                        } else {
-                            "text/html"
+                        let content_type = match extension {
+                            Some("css") => "text/css",
+                            Some("xml") => "application/xml",
+                            _ => "text/html",
                         };
 
                         return Ok(Response::builder()
@@ -437,6 +437,18 @@ impl Site {
                             .status(StatusCode::OK)
                             .body(full(content.to_owned()))
                             .unwrap());
+                    }
+
+                    // Check if the user forgot to add a trailing `/`.
+                    if !path.ends_with('/') && extension.is_none() {
+                        let path = format!("{path}/");
+                        if SITE_CONTENT.read().unwrap().get(&path).is_some() {
+                            return Ok(Response::builder()
+                                .header(header::LOCATION, path)
+                                .status(StatusCode::PERMANENT_REDIRECT)
+                                .body(empty())
+                                .unwrap());
+                        }
                     }
 
                     let mut not_found = Response::new(empty());
