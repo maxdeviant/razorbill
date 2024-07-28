@@ -80,15 +80,3 @@ fn loc() -> HtmlElement {
 fn lastmod() -> HtmlElement {
     HtmlElement::new("lastmod")
 }
-
-// <?xml version="1.0" encoding="UTF-8"?>
-// <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-//     {%- for sitemap_entry in entries %}
-//     <url>
-//         <loc>{{ sitemap_entry.permalink | escape_xml | safe }}</loc>
-//         {%- if sitemap_entry.updated %}
-//         <lastmod>{{ sitemap_entry.updated }}</lastmod>
-//         {%- endif %}
-//     </url>
-//     {%- endfor %}
-// </urlset>
