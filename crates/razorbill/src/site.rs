@@ -8,7 +8,7 @@ use std::{io, thread};
 
 use auk::renderer::HtmlElementRenderer;
 use auk::visitor::MutVisitor;
-use auk::HtmlElement;
+use auk::{Element, HtmlElement};
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
 use hyper::body::Bytes;
@@ -621,7 +621,7 @@ impl SiteBuilder<WithTemplates> {
     pub fn add_shortcode<Args: DeserializeOwned>(
         mut self,
         name: impl Into<String>,
-        render: impl Fn(Args) -> HtmlElement + Send + Sync + 'static,
+        render: impl Fn(Args) -> Element + Send + Sync + 'static,
     ) -> Self {
         self.shortcodes.insert(
             name.into(),

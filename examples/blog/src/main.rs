@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
             })
         })
         .add_shortcode("say_hello", |_args: ()| {
-            div().class("heading").child(text("Hello, world"))
+            div().class("heading").child(text("Hello, world")).into()
         })
         .with_sass("sass")
         .build();
@@ -251,12 +251,15 @@ fn post(PostProps { text }: PostProps) -> HtmlElement {
         HashMap::from_iter([
             (
                 "say_hello".into(),
-                Shortcode::new_thunk(|| div().class("heading").child("Hey there!")),
+                Shortcode::new_thunk(|| div().class("heading").child("Hey there!").into()),
             ),
             (
                 "say".into(),
                 Shortcode::new(|args: SayArgs| {
-                    div().class("heading").child(format!("{}!", args.greeting))
+                    div()
+                        .class("heading")
+                        .child(format!("{}!", args.greeting))
+                        .into()
                 }),
             ),
         ]),

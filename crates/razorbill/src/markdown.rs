@@ -528,8 +528,7 @@ mod tests {
         elements
             .into_iter()
             .map(|element| match element {
-                // TODO: Need to expose a way to retrieve the text from a `TextElement` in `auk`.
-                Element::Text(element) => "".to_string(),
+                Element::Text(element) => element.text,
                 Element::Html(element) => HtmlElementRenderer::new()
                     .render_to_string(&element)
                     .unwrap(),

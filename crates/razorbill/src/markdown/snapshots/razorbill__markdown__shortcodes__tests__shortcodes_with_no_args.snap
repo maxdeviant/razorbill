@@ -1,0 +1,5 @@
+---
+source: crates/razorbill/src/markdown/shortcodes.rs
+expression: "parse_and_render_markdown_with_shortcodes(text, shortcodes)"
+---
+"<h1>Chinese Numbers</h1><ol><li>一</li><li>二</li><li>三</li></ol>"
