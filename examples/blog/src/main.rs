@@ -24,7 +24,7 @@ enum Command {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let mut site = Site::builder()
+    let site = Site::builder()
         .root("examples/blog")
         .base_url("https://blog.example.com")
         .templates(
@@ -53,10 +53,8 @@ async fn main() -> Result<()> {
         .with_sass("sass")
         .build();
 
-    site.load()?;
-
     match cli.command {
-        Command::Build => site.render()?,
+        Command::Build => site.build()?,
         Command::Serve => site.serve().await?,
     }
 

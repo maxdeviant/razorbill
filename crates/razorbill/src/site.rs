@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::{io, thread};
 
+use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
 use auk::visitor::MutVisitor;
 use auk::{Element, HtmlElement};
@@ -350,6 +351,13 @@ impl Site {
         Ok(())
     }
 
+    pub fn build(mut self) -> Result<()> {
+        self.load()?;
+        self.render()?;
+
+        Ok(())
+    }
+
     pub async fn serve(mut self) -> Result<(), ServeSiteError> {
         let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
@@ -448,6 +456,7 @@ impl Site {
         {
             let mut site = site.write().unwrap();
             site.is_serving = true;
+            site.load().unwrap();
             site.render().unwrap();
         }
 

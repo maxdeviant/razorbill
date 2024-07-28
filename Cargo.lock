@@ -1228,6 +1228,7 @@ dependencies = [
 name = "razorbill"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "auk",
  "derive_more",
  "grass",
