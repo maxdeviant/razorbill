@@ -8,12 +8,15 @@ use crate::content::{
     from_toml_datetime, parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount,
     AVERAGE_ADULT_WPM,
 };
+use crate::permalink::Permalink;
+use crate::SiteConfig;
 
 #[derive(Debug)]
 pub struct Page {
     pub meta: PageFrontMatter,
     pub file: FileInfo,
     pub path: PagePath,
+    pub permalink: Permalink,
     pub ancestors: Vec<PathBuf>,
     pub slug: String,
     pub raw_content: String,
@@ -76,6 +79,7 @@ pub enum ParsePageError {
 
 impl Page {
     pub fn from_path(
+        config: &SiteConfig,
         root_path: impl AsRef<Path>,
         path: impl AsRef<Path>,
     ) -> Result<Self, ParsePageError> {
@@ -85,10 +89,11 @@ impl Page {
             filepath: path.to_owned(),
         })?;
 
-        Self::parse(&contents, root_path, path)
+        Self::parse(config, &contents, root_path, path)
     }
 
     pub fn parse(
+        config: &SiteConfig,
         text: &str,
         root_path: impl AsRef<Path>,
         filepath: &Path,
@@ -114,6 +119,7 @@ impl Page {
         Ok(Self {
             meta: front_matter,
             file,
+            permalink: Permalink::from_path(config, path.0.as_str()),
             path,
             ancestors: Vec::new(),
             slug,

@@ -126,19 +126,27 @@ mod tests {
         FileInfo, MaybeSortBy, PageFrontMatter, PagePath, ReadTime, SectionFrontMatter,
         SectionPath, SortBy, WordCount,
     };
+    use crate::permalink::Permalink;
+    use crate::SiteConfig;
 
     use super::*;
 
     fn make_section(filepath: &str, sort_by: MaybeSortBy) -> Section {
+        let config = SiteConfig {
+            base_url: "https://example.com".to_string(),
+        };
+
         let root_path = PathBuf::new();
         let file = FileInfo::new(&root_path, filepath);
+        let path = SectionPath::from_file_path(root_path, &file.path).unwrap();
 
         Section {
             meta: SectionFrontMatter {
                 sort_by,
                 ..Default::default()
             },
-            path: SectionPath::from_file_path(root_path, &file.path).unwrap(),
+            permalink: Permalink::from_path(&config, path.0.as_str()),
+            path,
             file,
             raw_content: String::new(),
             word_count: WordCount(0),
@@ -148,15 +156,21 @@ mod tests {
     }
 
     fn make_page(filepath: &str, date: &str) -> Page {
+        let config = SiteConfig {
+            base_url: "https://example.com".to_string(),
+        };
+
         let root_path = PathBuf::new();
         let file = FileInfo::new(&root_path, filepath);
+        let path = PagePath::from_file_path(root_path, &file.path).unwrap();
 
         Page {
             meta: PageFrontMatter {
                 date: Some(date.to_string()),
                 ..Default::default()
             },
-            path: PagePath::from_file_path(root_path, &file.path).unwrap(),
+            permalink: Permalink::from_path(&config, path.0.as_str()),
+            path,
             file,
             ancestors: Vec::new(),
             slug: String::new(),

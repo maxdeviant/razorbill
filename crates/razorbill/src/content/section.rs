@@ -8,12 +8,15 @@ use crate::content::{
     parse_front_matter, FileInfo, MaybeSortBy, ReadTime, ReadingMetrics, WordCount,
     AVERAGE_ADULT_WPM,
 };
+use crate::permalink::Permalink;
+use crate::SiteConfig;
 
 #[derive(Debug)]
 pub struct Section {
     pub meta: SectionFrontMatter,
     pub file: FileInfo,
     pub path: SectionPath,
+    pub permalink: Permalink,
     pub raw_content: String,
     pub word_count: WordCount,
     pub read_time: ReadTime,
@@ -77,6 +80,7 @@ pub enum ParseSectionError {
 
 impl Section {
     pub fn from_path(
+        config: &SiteConfig,
         root_path: impl AsRef<Path>,
         path: impl AsRef<Path>,
     ) -> Result<Option<Self>, ParseSectionError> {
@@ -96,10 +100,11 @@ impl Section {
             }
         }?;
 
-        Self::parse(&contents, root_path, &index_path).map(Some)
+        Self::parse(config, &contents, root_path, &index_path).map(Some)
     }
 
     pub fn parse(
+        config: &SiteConfig,
         text: &str,
         root_path: impl AsRef<Path>,
         filepath: &Path,
@@ -120,6 +125,7 @@ impl Section {
         Ok(Self {
             meta: front_matter,
             file,
+            permalink: Permalink::from_path(config, path.0.as_str()),
             path,
             raw_content: content.to_string(),
             word_count: reading_metrics.word_count,

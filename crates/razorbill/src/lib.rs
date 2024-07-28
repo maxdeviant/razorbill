@@ -2,8 +2,10 @@
 
 pub mod content;
 pub mod markdown;
+mod permalink;
 pub mod render;
 mod site;
+mod sitemap;
 mod storage;
 mod style;
 

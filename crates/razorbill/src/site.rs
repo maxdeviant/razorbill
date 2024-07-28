@@ -34,6 +34,7 @@ use crate::markdown::Shortcode;
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
 };
+use crate::sitemap::render_sitemap;
 use crate::storage::{DiskStorage, InMemoryStorage, Store};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -90,18 +91,18 @@ pub enum ServeSiteError {
 static SITE_CONTENT: Lazy<Arc<RwLock<HashMap<String, String>>>> =
     Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
 
-struct LinkReplacer<'site> {
-    site: &'site Site,
+struct LinkReplacer<'a> {
+    config: &'a SiteConfig,
 }
 
-impl<'site> MutVisitor for LinkReplacer<'site> {
+impl<'a> MutVisitor for LinkReplacer<'a> {
     type Error = ();
 
     fn visit_attr(&mut self, name: &str, value: &mut String) -> Result<(), Self::Error> {
         if name == "href" && value.starts_with("@/") {
             *value = format!(
                 "{}/{}",
-                self.site.base_url,
+                self.config.base_url,
                 value
                     .replacen("@/", "", 1)
                     .replace("_index.md", "")
@@ -121,16 +122,20 @@ struct BuildSiteParams {
     shortcodes: HashMap<String, Shortcode>,
 }
 
+pub struct SiteConfig {
+    pub base_url: String,
+}
+
 pub struct Site {
-    base_url: String,
+    config: SiteConfig,
     root_path: PathBuf,
     content_path: PathBuf,
     sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
     shortcodes: HashMap<String, Shortcode>,
-    sections: Sections,
-    pages: Pages,
+    pub(crate) sections: Sections,
+    pub(crate) pages: Pages,
     is_serving: bool,
 }
 
@@ -143,7 +148,9 @@ impl Site {
         let root_path = params.root_path;
 
         Site {
-            base_url: params.base_url,
+            config: SiteConfig {
+                base_url: params.base_url,
+            },
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
@@ -154,6 +161,10 @@ impl Site {
             pages: Pages::default(),
             is_serving: false,
         }
+    }
+
+    pub fn base_url(&self) -> &str {
+        &self.config.base_url
     }
 
     pub fn load(&mut self) -> Result<(), LoadSiteError> {
@@ -180,9 +191,9 @@ impl Site {
                     continue;
                 }
 
-                pages.push(Page::from_path(&self.content_path, path)?);
+                pages.push(Page::from_path(&self.config, &self.content_path, path)?);
             } else {
-                if let Some(section) = Section::from_path(&self.content_path, path)? {
+                if let Some(section) = Section::from_path(&self.config, &self.content_path, path)? {
                     sections.push(section);
                 }
             }
@@ -236,7 +247,7 @@ impl Site {
 
             let ctx = RenderSectionContext {
                 base: BaseRenderContext {
-                    base_url: &self.base_url,
+                    base_url: self.base_url(),
                     content_path: &self.content_path,
                     sections: &self.sections,
                     pages: &self.pages,
@@ -244,7 +255,9 @@ impl Site {
                 section: SectionToRender::from_section(section, &self.pages),
             };
 
-            let mut link_replacer = LinkReplacer { site: self };
+            let mut link_replacer = LinkReplacer {
+                config: &self.config,
+            };
 
             let mut rendered_section = section_template(&ctx);
             link_replacer.visit(&mut rendered_section).unwrap();
@@ -272,7 +285,7 @@ impl Site {
 
             let ctx = RenderPageContext {
                 base: BaseRenderContext {
-                    base_url: &self.base_url,
+                    base_url: self.base_url(),
                     content_path: &self.content_path,
                     sections: &self.sections,
                     pages: &self.pages,
@@ -280,7 +293,9 @@ impl Site {
                 page: PageToRender::from_page(page),
             };
 
-            let mut link_replacer = LinkReplacer { site: self };
+            let mut link_replacer = LinkReplacer {
+                config: &self.config,
+            };
 
             let mut rendered_page = page_template(&ctx);
             link_replacer.visit(&mut rendered_page).unwrap();
@@ -291,6 +306,8 @@ impl Site {
                 .store_rendered_page(&page, rendered)
                 .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
         }
+
+        render_sitemap(&self, &storage);
 
         if let Some(sass_path) = self.sass_path.as_ref() {
             fn is_sass(entry: &walkdir::DirEntry) -> bool {
@@ -325,7 +342,7 @@ impl Site {
                 let path = file.strip_prefix(&sass_path).unwrap();
 
                 storage
-                    .store_css(&path.with_extension("css"), css)
+                    .store_static_file(&path.with_extension("css"), css)
                     .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
             }
         }
@@ -336,7 +353,7 @@ impl Site {
     pub async fn serve(mut self) -> Result<(), ServeSiteError> {
         let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
-        self.base_url = format!("http://{}", addr.to_string());
+        self.config.base_url = format!("http://{}", addr.to_string());
 
         let listener = TcpListener::bind(addr).await?;
 
@@ -401,6 +418,8 @@ impl Site {
                     if let Some(content) = SITE_CONTENT.read().unwrap().get(path) {
                         let content_type = if path.ends_with(".css") {
                             "text/css"
+                        } else if path.ends_with(".xml") {
+                            "application/xml"
                         } else {
                             "text/html"
                         };

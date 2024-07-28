@@ -20,7 +20,7 @@ pub trait Store {
 
     fn store_rendered_page(&self, page: &Page, rendered_html: String) -> Result<(), Self::Error>;
 
-    fn store_css(&self, path: &Path, css: String) -> Result<(), Self::Error>;
+    fn store_static_file(&self, path: &Path, content: String) -> Result<(), Self::Error>;
 }
 
 pub struct DiskStorage {
@@ -77,7 +77,7 @@ impl Store for DiskStorage {
         Ok(())
     }
 
-    fn store_css(&self, path: &Path, css: String) -> Result<(), Self::Error> {
+    fn store_static_file(&self, path: &Path, content: String) -> Result<(), Self::Error> {
         let mut output_dir = self.output_path.to_owned();
 
         if let Some(parent) = path.parent() {
@@ -89,7 +89,7 @@ impl Store for DiskStorage {
         let output_path = output_dir.join(path);
         let mut output_file = File::create(&output_path)?;
 
-        output_file.write_all(css.as_bytes())?;
+        output_file.write_all(content.as_bytes())?;
 
         Ok(())
     }
@@ -136,7 +136,7 @@ impl Store for InMemoryStorage {
         Ok(())
     }
 
-    fn store_css(&self, path: &Path, css: String) -> Result<(), Self::Error> {
+    fn store_static_file(&self, path: &Path, css: String) -> Result<(), Self::Error> {
         self.storage
             .write()
             .map_err(|_| InMemoryStorageError::Poisoned)?
