@@ -170,6 +170,7 @@ dependencies = [
  "auk",
  "clap",
  "razorbill",
+ "serde",
  "tokio",
 ]
 

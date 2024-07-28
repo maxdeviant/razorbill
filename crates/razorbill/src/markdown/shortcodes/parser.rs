@@ -27,9 +27,10 @@ pub fn parse_document(
             Rule::shortcode_call => {
                 let start = output.len();
                 let end = start + SHORTCODE_PLACEHOLDER.len();
-                let (name, _args) = parse_shortcode_call(pair);
+                let (name, args) = parse_shortcode_call(pair);
                 shortcode_calls.push(ShortcodeCall {
                     name,
+                    args,
                     span: start..end,
                 });
                 output.push_str(SHORTCODE_PLACEHOLDER);
@@ -42,7 +43,7 @@ pub fn parse_document(
     Ok((output, shortcode_calls))
 }
 
-fn parse_shortcode_call(pair: Pair<Rule>) -> (String, Value) {
+fn parse_shortcode_call(pair: Pair<Rule>) -> (String, Map<String, Value>) {
     let mut name = None;
     let mut args = Map::new();
 
@@ -73,7 +74,7 @@ fn parse_shortcode_call(pair: Pair<Rule>) -> (String, Value) {
         }
     }
 
-    (name.unwrap(), Value::Object(args))
+    (name.unwrap(), args)
 }
 
 fn parse_literal(pair: Pair<Rule>) -> Value {

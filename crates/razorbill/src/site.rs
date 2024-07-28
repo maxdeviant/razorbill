@@ -18,6 +18,7 @@ use hyper::{header, Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
+use serde::de::DeserializeOwned;
 use serde_json::json;
 use thiserror::Error;
 use tokio::net::TcpListener;
@@ -617,15 +618,17 @@ impl SiteBuilder<WithTemplates> {
         self
     }
 
-    pub fn add_shortcode(
+    pub fn add_shortcode<Args: DeserializeOwned>(
         mut self,
         name: impl Into<String>,
-        render: impl Fn() -> HtmlElement + Send + Sync + 'static,
+        render: impl Fn(Args) -> HtmlElement + Send + Sync + 'static,
     ) -> Self {
         self.shortcodes.insert(
             name.into(),
             Shortcode {
-                render: Arc::new(render),
+                render: Arc::new(move |args| {
+                    render(serde_json::from_value(serde_json::Value::Object(args)).unwrap())
+                }),
             },
         );
         self

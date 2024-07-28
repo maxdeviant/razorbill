@@ -6,21 +6,43 @@ use std::sync::Arc;
 
 use auk::visitor::MutVisitor;
 use auk::{Element, HtmlElement};
+use serde::de::DeserializeOwned;
+use serde_json::{Map, Value};
 
 use crate::markdown::shortcodes::parser::parse_document;
 use crate::markdown::{markdown, MarkdownComponents};
 
 const SHORTCODE_PLACEHOLDER: &str = "@@RAZORBILL_SHORTCODE@@";
 
-pub type RenderShortcode = Arc<dyn Fn() -> HtmlElement + Send + Sync>;
+pub type RenderShortcode = Arc<dyn Fn(Map<String, Value>) -> HtmlElement + Send + Sync>;
 
 pub struct Shortcode {
     pub render: RenderShortcode,
 }
 
+impl Shortcode {
+    pub fn new<Args: DeserializeOwned>(
+        render: impl Fn(Args) -> HtmlElement + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            render: Arc::new(move |args| {
+                let args = serde_json::from_value(Value::Object(args)).unwrap();
+                render(args)
+            }),
+        }
+    }
+
+    pub fn new_thunk(render: impl Fn() -> HtmlElement + Send + Sync + 'static) -> Self {
+        Self {
+            render: Arc::new(move |_args| render()),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ShortcodeCall {
     pub name: String,
+    pub args: Map<String, Value>,
     pub span: Range<usize>,
 }
 
@@ -58,7 +80,7 @@ impl MutVisitor for ShortcodeReplacer {
                         let call = self.calls.next().unwrap();
                         let shortcode = self.shortcodes.get(&call.name).unwrap();
 
-                        *child = (shortcode.render)().into();
+                        *child = (shortcode.render)(call.args).into();
                     }
                 }
                 Element::Html(element) => self.visit(element)?,

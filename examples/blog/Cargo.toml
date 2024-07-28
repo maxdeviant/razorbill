@@ -9,4 +9,5 @@ anyhow.workspace = true
 auk.workspace = true
 clap = { workspace = true, features = ["derive"] }
 razorbill.workspace = true
+serde = { workspace = true, features = ["derive"] }
 tokio = { workspace = true, features = ["full"] }

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::Result;
 use auk::*;
@@ -7,6 +6,7 @@ use clap::{Parser, Subcommand};
 use razorbill::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
 use razorbill::render::{PageToRender, RenderPageContext, RenderSectionContext};
 use razorbill::{plumage, Site};
+use serde::Deserialize;
 
 #[derive(Parser)]
 struct Cli {
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
                 })],
             })
         })
-        .add_shortcode("say_hello", || {
+        .add_shortcode("say_hello", |_args: ()| {
             div().class("heading").child(text("Hello, world"))
         })
         .with_sass("sass")
@@ -232,6 +232,11 @@ fn prose(ProseProps { ctx, children }: ProseProps) -> HtmlElement {
     })
 }
 
+#[derive(Deserialize)]
+struct SayArgs {
+    pub greeting: String,
+}
+
 struct PostProps<'a> {
     pub text: &'a str,
 }
@@ -243,12 +248,18 @@ fn post(PostProps { text }: PostProps) -> HtmlElement {
             p: Box::new(post_paragraph),
             ..Default::default()
         },
-        HashMap::from_iter([(
-            "say_hello".into(),
-            Shortcode {
-                render: Arc::new(|| div().class("heading").child("Hey there!")),
-            },
-        )]),
+        HashMap::from_iter([
+            (
+                "say_hello".into(),
+                Shortcode::new_thunk(|| div().class("heading").child("Hey there!")),
+            ),
+            (
+                "say".into(),
+                Shortcode::new(|args: SayArgs| {
+                    div().class("heading").child(format!("{}!", args.greeting))
+                }),
+            ),
+        ]),
     ))
 }
 
