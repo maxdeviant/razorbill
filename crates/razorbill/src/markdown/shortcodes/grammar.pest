@@ -1,0 +1,39 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+
+boolean = { "true" | "false" }
+
+string_double_quotes = @{ "\"" ~ (!("\"") ~ ANY)* ~ "\"" }
+string_single_quotes = @{ "\'" ~ (!("\'") ~ ANY)* ~ "\'" }
+string_backtick      = @{ "`" ~ (!("`") ~ ANY)* ~ "`" }
+
+string = @{
+    string_double_quotes
+  | string_single_quotes
+  | string_backtick
+}
+
+int   = @{ "-"? ~ ("0" | '1'..'9' ~ '0'..'9'*) }
+float = @{
+    "-"? ~ ("0" ~ "." ~ '0'..'9'+ | '1'..'9' ~ '0'..'9'* ~ "." ~ '0'..'9'+)
+}
+
+literal = { boolean | string | float | int | array }
+
+array = { "[" ~ (literal ~ ",")* ~ literal? ~ "]" }
+
+char  = _{ 'a'..'z' | 'A'..'Z' | "_" | '0'..'9' }
+ident = @{
+    ('a'..'z' | 'A'..'Z' | "_") ~ char*
+}
+
+arg      =  { ident ~ "=" ~ literal }
+arg_list = _{ arg ~ ("," ~ arg)* }
+call     = _{ ident ~ "(" ~ arg_list* ~ ")" }
+
+shortcode_call = !{ "{{" ~ call ~ "}}" }
+
+text = ${ (!(shortcode_call) ~ ANY)+ }
+
+content = _{ shortcode_call | text }
+
+document = ${ SOI ~ content* ~ EOI }

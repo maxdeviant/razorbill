@@ -20,6 +20,8 @@ hyper-util = { workspace = true, features = ["full"] }
 indexmap.workspace = true
 notify = { workspace = true, default-features = false, features = ["macos_kqueue"] }
 once_cell.workspace = true
+pest.workspace = true
+pest_derive.workspace = true
 pulldown-cmark.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }

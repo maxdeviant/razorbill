@@ -1,3 +1,5 @@
+mod parser;
+
 use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::Arc;
@@ -5,6 +7,7 @@ use std::sync::Arc;
 use auk::visitor::MutVisitor;
 use auk::{Element, HtmlElement};
 
+use crate::markdown::shortcodes::parser::parse_document;
 use crate::markdown::{markdown, MarkdownComponents};
 
 const SHORTCODE_PLACEHOLDER: &str = "@@RAZORBILL_SHORTCODE@@";
@@ -26,19 +29,7 @@ pub fn markdown_with_shortcodes(
     components: MarkdownComponents,
     shortcodes: HashMap<String, Shortcode>,
 ) -> Vec<Element> {
-    let mut shortcode_calls = extract_shortcodes(&input);
-
-    let mut output = String::with_capacity(input.len());
-    let mut cursor = 0;
-
-    for call in &mut shortcode_calls {
-        output.push_str(&input[cursor..call.span.start]);
-        output.push_str(SHORTCODE_PLACEHOLDER);
-        cursor = call.span.end;
-        call.span = output.len() - SHORTCODE_PLACEHOLDER.len()..output.len();
-    }
-
-    output.push_str(&input[cursor..]);
+    let (output, shortcode_calls) = parse_document(input).unwrap();
 
     let mut elements = markdown(&output, components);
     let mut shortcode_replacer = ShortcodeReplacer {
@@ -49,17 +40,6 @@ pub fn markdown_with_shortcodes(
     shortcode_replacer.visit_children(&mut elements).unwrap();
 
     elements
-}
-
-fn extract_shortcodes(text: &str) -> Vec<ShortcodeCall> {
-    let regex = regex::Regex::new(r"\{\{\s*(\w+)\(\)\s*\}\}").unwrap();
-    regex
-        .captures_iter(text)
-        .map(|captures| ShortcodeCall {
-            name: captures[1].to_string(),
-            span: captures.get(0).unwrap().start()..captures.get(0).unwrap().end(),
-        })
-        .collect()
 }
 
 struct ShortcodeReplacer {
