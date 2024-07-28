@@ -118,7 +118,6 @@ impl<'a> MutVisitor for LinkReplacer<'a> {
 struct BuildSiteParams {
     base_url: String,
     root_path: PathBuf,
-    output_path: Option<PathBuf>,
     sass_path: Option<PathBuf>,
     templates: Templates,
     shortcodes: HashMap<String, Shortcode>,
@@ -156,9 +155,7 @@ impl Site {
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
-            output_path: params
-                .output_path
-                .unwrap_or_else(|| root_path.join("public")),
+            output_path: root_path.join("public"),
             templates: params.templates,
             shortcodes: params.shortcodes,
             sections: Sections::default(),
@@ -169,6 +166,10 @@ impl Site {
 
     pub fn base_url(&self) -> &str {
         &self.config.base_url
+    }
+
+    pub fn set_output_path(&mut self, output_path: impl AsRef<Path>) {
+        self.output_path = output_path.as_ref().to_owned();
     }
 
     pub fn load(&mut self) -> Result<(), LoadSiteError> {
@@ -549,7 +550,6 @@ impl Site {
 pub struct SiteBuilder<State> {
     state: PhantomData<State>,
     root_path: PathBuf,
-    output_path: Option<PathBuf>,
     base_url: String,
     templates: Templates,
     shortcodes: HashMap<String, Shortcode>,
@@ -561,7 +561,6 @@ impl<State> SiteBuilder<State> {
         SiteBuilder {
             state: PhantomData,
             root_path: self.root_path,
-            output_path: self.output_path,
             base_url: self.base_url,
             templates: self.templates,
             shortcodes: self.shortcodes,
@@ -573,7 +572,6 @@ impl<State> SiteBuilder<State> {
         Site::from_params(BuildSiteParams {
             base_url: self.base_url,
             root_path: self.root_path,
-            output_path: self.output_path,
             sass_path: self.sass_path,
             templates: self.templates,
             shortcodes: self.shortcodes,
@@ -586,7 +584,6 @@ impl SiteBuilder<()> {
         Self {
             state: PhantomData,
             root_path: PathBuf::new(),
-            output_path: None,
             base_url: String::new(),
             templates: Templates {
                 index: Arc::new(|_| auk::div()),
@@ -612,13 +609,6 @@ impl SiteBuilder<WithRootPath> {
     pub fn base_url(self, base_url: impl Into<String>) -> SiteBuilder<WithBaseUrl> {
         SiteBuilder {
             base_url: base_url.into(),
-            ..self.coerce()
-        }
-    }
-
-    pub fn output_path(self, output_path: impl AsRef<Path>) -> SiteBuilder<WithRootPath> {
-        SiteBuilder {
-            output_path: Some(output_path.as_ref().to_owned()),
             ..self.coerce()
         }
     }
