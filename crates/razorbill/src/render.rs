@@ -81,6 +81,7 @@ impl<'a> RenderSectionContext<'a> {}
 pub struct SectionToRender<'a> {
     pub title: &'a Option<String>,
     pub path: &'a str,
+    pub permalink: &'a str,
     pub raw_content: &'a str,
     pub word_count: WordCount,
     pub read_time: ReadTime,
@@ -100,6 +101,7 @@ impl<'a> SectionToRender<'a> {
         Self {
             title: &section.meta.title,
             path: &section.path.0,
+            permalink: &section.permalink.as_str(),
             raw_content: &section.raw_content,
             word_count: section.word_count,
             read_time: section.read_time,
@@ -133,6 +135,7 @@ pub struct PageToRender<'a> {
     pub title: &'a Option<String>,
     pub slug: &'a str,
     pub path: &'a str,
+    pub permalink: &'a str,
     pub date: &'a Option<String>,
     pub updated: &'a Option<String>,
     pub raw_content: &'a str,
@@ -147,6 +150,7 @@ impl<'a> PageToRender<'a> {
             title: &page.meta.title,
             slug: &page.slug,
             path: &page.path.0,
+            permalink: &page.permalink.as_str(),
             date: &page.meta.date,
             updated: &page.meta.updated,
             raw_content: &page.raw_content,
