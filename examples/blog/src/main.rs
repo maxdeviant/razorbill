@@ -130,14 +130,13 @@ struct PageListProps<'a> {
 }
 
 fn page_list(PageListProps { heading, pages }: PageListProps) -> HtmlElement {
-    div()
-        .child(h2().child(heading))
-        .child(ul().children(pages.into_iter().map(|page| {
-            li().child(
-                a().href(page.path.to_string())
-                    .child(page.title.as_ref().unwrap()),
-            )
-        })))
+    div().child(h2().child(heading)).child(
+        ul().children(
+            pages.into_iter().map(|page| {
+                li().child(a().href(page.permalink).child(page.title.as_ref().unwrap()))
+            }),
+        ),
+    )
 }
 
 struct SectionProps<'a> {
@@ -162,7 +161,7 @@ fn section(SectionProps { ctx }: SectionProps) -> HtmlElement {
                     .class("content")
                     .children(section.pages.iter().map(|page| {
                         li().child(
-                            a().href(page.path)
+                            a().href(page.permalink)
                                 .child(page.title.clone().unwrap_or_default()),
                         )
                     })),

@@ -122,7 +122,7 @@ impl Store for InMemoryStorage {
         self.storage
             .write()
             .map_err(|_| InMemoryStorageError::Poisoned)?
-            .insert(section.path.0.replace("/_index", "/"), rendered_html);
+            .insert(section.permalink.path().to_owned(), rendered_html);
 
         Ok(())
     }
@@ -131,7 +131,7 @@ impl Store for InMemoryStorage {
         self.storage
             .write()
             .map_err(|_| InMemoryStorageError::Poisoned)?
-            .insert(page.path.0.clone(), rendered_html);
+            .insert(page.permalink.path().to_owned(), rendered_html);
 
         Ok(())
     }
