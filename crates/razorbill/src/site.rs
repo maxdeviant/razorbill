@@ -93,7 +93,7 @@ static SITE_CONTENT: Lazy<Arc<RwLock<HashMap<String, String>>>> =
     Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 struct LinkReplacer<'a> {
-    config: &'a SiteConfig,
+    site: &'a Site,
 }
 
 impl<'a> MutVisitor for LinkReplacer<'a> {
@@ -101,14 +101,27 @@ impl<'a> MutVisitor for LinkReplacer<'a> {
 
     fn visit_attr(&mut self, name: &str, value: &mut String) -> Result<(), Self::Error> {
         if name == "href" && value.starts_with("@/") {
-            *value = format!(
-                "{}/{}",
-                self.config.base_url,
-                value
-                    .replacen("@/", "", 1)
-                    .replace("_index.md", "")
-                    .replace(".md", "")
-            );
+            let path = self.site.content_path.join(value.replacen("@/", "", 1));
+
+            let permalink = None
+                .or_else(|| {
+                    self.site
+                        .pages
+                        .get(&path)
+                        .map(|page| page.permalink.clone())
+                })
+                .or_else(|| {
+                    self.site
+                        .sections
+                        .get(&path)
+                        .map(|section| section.permalink.clone())
+                });
+
+            if let Some(permalink) = permalink {
+                *value = permalink.as_str().to_owned();
+            } else {
+                eprintln!("Invalid link: {value}");
+            }
         }
 
         Ok(())
@@ -260,9 +273,7 @@ impl Site {
                 section: SectionToRender::from_section(section, &self.pages),
             };
 
-            let mut link_replacer = LinkReplacer {
-                config: &self.config,
-            };
+            let mut link_replacer = LinkReplacer { site: &self };
 
             let mut rendered_section = section_template(&ctx);
             link_replacer.visit(&mut rendered_section).unwrap();
@@ -298,9 +309,7 @@ impl Site {
                 page: PageToRender::from_page(page),
             };
 
-            let mut link_replacer = LinkReplacer {
-                config: &self.config,
-            };
+            let mut link_replacer = LinkReplacer { site: &self };
 
             let mut rendered_page = page_template(&ctx);
             link_replacer.visit(&mut rendered_page).unwrap();
