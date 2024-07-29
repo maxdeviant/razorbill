@@ -2,12 +2,14 @@ mod shortcodes;
 
 use std::collections::{HashMap, VecDeque};
 
+use auk::visitor::{noop_visit_element, MutVisitor};
 use auk::{Element, HtmlElement, WithChildren};
 use pulldown_cmark::{
     self as md, Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag,
 };
 
 pub use shortcodes::*;
+use slug::slugify;
 
 pub struct MarkdownComponents {
     pub div: Box<dyn Fn() -> HtmlElement>,
@@ -222,7 +224,63 @@ pub fn markdown(text: &str, components: MarkdownComponents) -> Vec<Element> {
 
     let parser = md::Parser::new_ext(text, options);
 
-    HtmlElementWriter::new(parser, components).run()
+    let mut elements = HtmlElementWriter::new(parser, components).run();
+
+    let mut heading_identifier = HeadingIdentifier::new();
+    heading_identifier.visit_children(&mut elements).unwrap();
+
+    elements
+}
+
+struct HeadingIdentifier {
+    inside_header: bool,
+    title: Option<String>,
+}
+
+impl HeadingIdentifier {
+    fn new() -> Self {
+        Self {
+            inside_header: false,
+            title: None,
+        }
+    }
+}
+
+impl MutVisitor for HeadingIdentifier {
+    type Error = ();
+
+    fn visit(&mut self, element: &mut HtmlElement) -> Result<(), Self::Error> {
+        match element.tag_name.as_str() {
+            "h2" | "h3" | "h4" | "h5" | "h6" => {
+                self.inside_header = true;
+
+                noop_visit_element(self, element)?;
+
+                if let Some(title) = self.title.take() {
+                    if element.attrs.get("id").is_none() {
+                        let slug = slugify(&title);
+
+                        element.attrs.insert("id".to_string(), slug);
+                    }
+                }
+
+                self.inside_header = false;
+            }
+            _ => {}
+        }
+
+        noop_visit_element(self, element)
+    }
+
+    fn visit_text(&mut self, text: &mut String) -> Result<(), Self::Error> {
+        if self.inside_header {
+            let mut title = self.title.take().unwrap_or_default();
+            title.push_str(&text);
+            self.title = Some(title);
+        }
+
+        Ok(())
+    }
 }
 
 enum TableState {

@@ -24,6 +24,7 @@ razorbill = { path = "crates/razorbill" }
 regex = "1.10.2"
 serde = "1.0.194"
 serde_json = "1.0.111"
+slug = "0.1.5"
 thiserror = "1.0.56"
 tokio = "1.35.1"
 toml = "0.8.8"

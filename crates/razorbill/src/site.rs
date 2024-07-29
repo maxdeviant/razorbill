@@ -273,9 +273,9 @@ impl Site {
                 section: SectionToRender::from_section(section, &self.pages),
             };
 
-            let mut link_replacer = LinkReplacer { site: &self };
-
             let mut rendered_section = section_template(&ctx);
+
+            let mut link_replacer = LinkReplacer { site: &self };
             link_replacer.visit(&mut rendered_section).unwrap();
 
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_section)?;
@@ -309,9 +309,9 @@ impl Site {
                 page: PageToRender::from_page(page),
             };
 
-            let mut link_replacer = LinkReplacer { site: &self };
-
             let mut rendered_page = page_template(&ctx);
+
+            let mut link_replacer = LinkReplacer { site: &self };
             link_replacer.visit(&mut rendered_page).unwrap();
 
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_page)?;
