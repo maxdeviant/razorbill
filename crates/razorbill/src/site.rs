@@ -17,6 +17,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{header, Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
+use mime_guess::MimeGuess;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use serde::de::DeserializeOwned;
@@ -144,6 +145,8 @@ pub struct Site {
     config: SiteConfig,
     root_path: PathBuf,
     content_path: PathBuf,
+    /// The path to the `static` directory that houses static assets.
+    static_path: PathBuf,
     sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
@@ -167,6 +170,7 @@ impl Site {
             },
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
+            static_path: root_path.join("static"),
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
             output_path: root_path.join("public"),
             templates: params.templates,
@@ -425,6 +429,7 @@ impl Site {
 
         async fn handle_request(
             req: Request<hyper::body::Incoming>,
+            static_path: Arc<Path>,
         ) -> Result<Response<BoxBody<Bytes, hyper::Error>>, Infallible> {
             match (req.method(), req.uri().path()) {
                 (&Method::GET, path) => {
@@ -464,6 +469,21 @@ impl Site {
                         }
                     }
 
+                    let static_file_path = static_path.join(&path[1..]);
+                    if let Ok(contents) = tokio::fs::read(&static_file_path).await {
+                        return Ok(Response::builder()
+                            .status(StatusCode::OK)
+                            .header(
+                                header::CONTENT_TYPE,
+                                MimeGuess::from_path(static_file_path)
+                                    .first_or_octet_stream()
+                                    .essence_str(),
+                            )
+                            .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                            .body(full(contents))
+                            .unwrap());
+                    }
+
                     let mut not_found = Response::new(empty());
                     *not_found.status_mut() = StatusCode::NOT_FOUND;
                     Ok(not_found)
@@ -476,6 +496,7 @@ impl Site {
             }
         }
 
+        let static_path: Arc<Path> = self.static_path.clone().into();
         let site = Arc::new(RwLock::new(self));
 
         {
@@ -544,12 +565,18 @@ impl Site {
 
             let io = TokioIo::new(stream);
 
-            tokio::task::spawn(async move {
-                if let Err(err) = http1::Builder::new()
-                    .serve_connection(io, service_fn(handle_request))
-                    .await
-                {
-                    eprintln!("Error serving connection: {err:?}");
+            tokio::task::spawn({
+                let static_path = static_path.clone();
+                async move {
+                    if let Err(err) = http1::Builder::new()
+                        .serve_connection(
+                            io,
+                            service_fn(move |req| handle_request(req, static_path.clone())),
+                        )
+                        .await
+                    {
+                        eprintln!("Error serving connection: {err:?}");
+                    }
                 }
             });
         }

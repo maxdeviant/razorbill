@@ -19,6 +19,7 @@ http-body-util.workspace = true
 hyper = { workspace = true, features = ["full"] }
 hyper-util = { workspace = true, features = ["full"] }
 indexmap.workspace = true
+mime_guess.worksace = true
 notify = { workspace = true, default-features = false, features = ["macos_kqueue"] }
 once_cell.workspace = true
 pest.workspace = true
