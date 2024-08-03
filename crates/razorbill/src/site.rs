@@ -375,7 +375,91 @@ impl Site {
 
         render_sitemap(&self, &storage);
         render_feed(&self, self.pages.values().collect(), &storage);
+        self.render_taxonomies(&storage)?;
 
+        if let Some(sass_path) = self.sass_path.as_ref() {
+            fn is_sass(entry: &walkdir::DirEntry) -> bool {
+                entry
+                    .path()
+                    .extension()
+                    .and_then(|extension| extension.to_str())
+                    .map(|extension| extension == "sass" || extension == "scss")
+                    .unwrap_or(false)
+            }
+
+            fn is_partial(entry: &walkdir::DirEntry) -> bool {
+                entry
+                    .file_name()
+                    .to_str()
+                    .map(|filename| filename.starts_with('_'))
+                    .unwrap_or(false)
+            }
+
+            let sass_files = WalkDir::new(sass_path)
+                .into_iter()
+                .filter_entry(|entry| !is_partial(entry))
+                .filter_map(|entry| entry.ok())
+                .filter(is_sass)
+                .map(|entry| entry.into_path())
+                .collect::<Vec<_>>();
+
+            let options = grass::Options::default().style(grass::OutputStyle::Compressed);
+
+            for file in sass_files {
+                let css = grass::from_path(&file, &options).unwrap();
+                let path = file.strip_prefix(&sass_path).unwrap();
+
+                storage
+                    .store_static_file(&path.with_extension("css"), css)
+                    .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn render_aliases(&self, storage: &impl Store) {
+        for section in self.sections.values() {
+            for alias in &section.meta.aliases {
+                self.render_alias(alias, &section.permalink, storage);
+            }
+        }
+
+        for page in self.pages.values() {
+            for alias in &page.meta.aliases {
+                self.render_alias(alias, &page.permalink, storage);
+            }
+        }
+    }
+
+    fn render_alias(&self, alias: &str, permalink: &Permalink, storage: &impl Store) {
+        use auk::*;
+
+        let url = permalink.as_str();
+        let alias_template = html()
+            .child(meta().charset("utf-8"))
+            .child(link().rel("canonical").href(url))
+            .child(
+                meta()
+                    .http_equiv("refresh")
+                    .content(format!("0; url={url}")),
+            )
+            .child(title().child("Redirect"))
+            .child(
+                p().child(a().href(url).child("Click here"))
+                    .child(" to be redirected."),
+            );
+
+        let html = HtmlElementRenderer::new()
+            .render_to_string(&alias_template)
+            .unwrap();
+
+        storage
+            .store_content(Permalink::from_path(&self.config, alias), html)
+            .unwrap();
+    }
+
+    fn render_taxonomies(&self, storage: &impl Store) -> Result<(), RenderSiteError> {
         for (taxonomy, pages_by_term) in &self.taxonomies {
             let taxonomy_template = self
                 .templates
@@ -475,86 +559,7 @@ impl Site {
             }
         }
 
-        if let Some(sass_path) = self.sass_path.as_ref() {
-            fn is_sass(entry: &walkdir::DirEntry) -> bool {
-                entry
-                    .path()
-                    .extension()
-                    .and_then(|extension| extension.to_str())
-                    .map(|extension| extension == "sass" || extension == "scss")
-                    .unwrap_or(false)
-            }
-
-            fn is_partial(entry: &walkdir::DirEntry) -> bool {
-                entry
-                    .file_name()
-                    .to_str()
-                    .map(|filename| filename.starts_with('_'))
-                    .unwrap_or(false)
-            }
-
-            let sass_files = WalkDir::new(sass_path)
-                .into_iter()
-                .filter_entry(|entry| !is_partial(entry))
-                .filter_map(|entry| entry.ok())
-                .filter(is_sass)
-                .map(|entry| entry.into_path())
-                .collect::<Vec<_>>();
-
-            let options = grass::Options::default().style(grass::OutputStyle::Compressed);
-
-            for file in sass_files {
-                let css = grass::from_path(&file, &options).unwrap();
-                let path = file.strip_prefix(&sass_path).unwrap();
-
-                storage
-                    .store_static_file(&path.with_extension("css"), css)
-                    .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
-            }
-        }
-
         Ok(())
-    }
-
-    fn render_aliases(&self, storage: &impl Store) {
-        for section in self.sections.values() {
-            for alias in &section.meta.aliases {
-                self.render_alias(alias, &section.permalink, storage);
-            }
-        }
-
-        for page in self.pages.values() {
-            for alias in &page.meta.aliases {
-                self.render_alias(alias, &page.permalink, storage);
-            }
-        }
-    }
-
-    fn render_alias(&self, alias: &str, permalink: &Permalink, storage: &impl Store) {
-        use auk::*;
-
-        let url = permalink.as_str();
-        let alias_template = html()
-            .child(meta().charset("utf-8"))
-            .child(link().rel("canonical").href(url))
-            .child(
-                meta()
-                    .http_equiv("refresh")
-                    .content(format!("0; url={url}")),
-            )
-            .child(title().child("Redirect"))
-            .child(
-                p().child(a().href(url).child("Click here"))
-                    .child(" to be redirected."),
-            );
-
-        let html = HtmlElementRenderer::new()
-            .render_to_string(&alias_template)
-            .unwrap();
-
-        storage
-            .store_content(Permalink::from_path(&self.config, alias), html)
-            .unwrap();
     }
 
     pub fn build(mut self) -> Result<()> {
