@@ -9,7 +9,7 @@ use std::{io, thread};
 use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
 use auk::visitor::MutVisitor;
-use auk::{Element, HtmlElement};
+use auk::HtmlElement;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
 use hyper::body::Bytes;
@@ -20,7 +20,6 @@ use hyper_util::rt::TokioIo;
 use mime_guess::MimeGuess;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
-use serde::de::DeserializeOwned;
 use serde_json::json;
 use thiserror::Error;
 use tokio::net::TcpListener;
@@ -32,7 +31,7 @@ use crate::content::{
     ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
     Sections, Taxonomy, TaxonomyTerm,
 };
-use crate::markdown::Shortcode;
+use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
 use crate::permalink::Permalink;
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext,
@@ -143,6 +142,7 @@ struct BuildSiteParams {
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
     templates: Templates,
+    markdown_components: MarkdownComponents,
     shortcodes: HashMap<String, Shortcode>,
     taxonomies: Vec<Taxonomy>,
 }
@@ -161,6 +161,7 @@ pub struct Site {
     sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
+    markdown_components: MarkdownComponents,
     shortcodes: HashMap<String, Shortcode>,
     pub(crate) sections: Sections,
     pub(crate) pages: Pages,
@@ -187,6 +188,7 @@ impl Site {
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
             output_path: root_path.join("public"),
             templates: params.templates,
+            markdown_components: params.markdown_components,
             shortcodes: params.shortcodes,
             sections: Sections::default(),
             pages: Pages::default(),
@@ -264,6 +266,22 @@ impl Site {
 
     fn render_to(&mut self, storage: impl Store) -> Result<(), RenderSiteError> {
         self.render_aliases(&storage);
+
+        for section in self.sections.values_mut() {
+            section.content = markdown_with_shortcodes(
+                &section.raw_content,
+                &self.markdown_components,
+                &self.shortcodes,
+            );
+        }
+
+        for page in self.pages.values_mut() {
+            page.content = markdown_with_shortcodes(
+                &page.raw_content,
+                &self.markdown_components,
+                &self.shortcodes,
+            );
+        }
 
         for section in self.sections.values() {
             let section_template = if section.path == SectionPath("/_index".to_string()) {
@@ -742,6 +760,7 @@ pub struct SiteBuilder<State> {
     root_path: PathBuf,
     base_url: String,
     templates: Templates,
+    markdown_components: MarkdownComponents,
     shortcodes: HashMap<String, Shortcode>,
     taxonomies: Vec<Taxonomy>,
     sass_path: Option<PathBuf>,
@@ -754,6 +773,7 @@ impl<State> SiteBuilder<State> {
             root_path: self.root_path,
             base_url: self.base_url,
             templates: self.templates,
+            markdown_components: self.markdown_components,
             shortcodes: self.shortcodes,
             taxonomies: self.taxonomies,
             sass_path: self.sass_path,
@@ -766,6 +786,7 @@ impl<State> SiteBuilder<State> {
             root_path: self.root_path,
             sass_path: self.sass_path,
             templates: self.templates,
+            markdown_components: self.markdown_components,
             shortcodes: self.shortcodes,
             taxonomies: self.taxonomies,
         })
@@ -785,6 +806,7 @@ impl SiteBuilder<()> {
                 taxonomy: HashMap::new(),
                 taxonomy_term: HashMap::new(),
             },
+            markdown_components: MarkdownComponents::default(),
             shortcodes: HashMap::new(),
             taxonomies: Vec::new(),
             sass_path: None,
@@ -860,19 +882,13 @@ impl SiteBuilder<WithTemplates> {
         self
     }
 
-    pub fn add_shortcode<Args: DeserializeOwned>(
-        mut self,
-        name: impl Into<String>,
-        render: impl Fn(Args) -> Element + Send + Sync + 'static,
-    ) -> Self {
-        self.shortcodes.insert(
-            name.into(),
-            Shortcode {
-                render: Arc::new(move |args| {
-                    render(serde_json::from_value(serde_json::Value::Object(args)).unwrap())
-                }),
-            },
-        );
+    pub fn with_markdown_components(mut self, markdown_components: MarkdownComponents) -> Self {
+        self.markdown_components = markdown_components;
+        self
+    }
+
+    pub fn add_shortcode(mut self, name: impl Into<String>, shortcode: Shortcode) -> Self {
+        self.shortcodes.insert(name.into(), shortcode);
         self
     }
 

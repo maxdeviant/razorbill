@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
+use auk::Element;
 use serde::Deserialize;
 
 use crate::content::{Page, Pages, ReadTime, Section, Sections, WordCount};
@@ -83,6 +84,7 @@ pub struct SectionToRender<'a> {
     pub path: &'a str,
     pub permalink: &'a str,
     pub raw_content: &'a str,
+    pub content: &'a Vec<Element>,
     pub word_count: WordCount,
     pub read_time: ReadTime,
     pub extra: &'a toml::Table,
@@ -103,6 +105,7 @@ impl<'a> SectionToRender<'a> {
             path: &section.path.0,
             permalink: &section.permalink.as_str(),
             raw_content: &section.raw_content,
+            content: &section.content,
             word_count: section.word_count,
             read_time: section.read_time,
             extra: &section.meta.extra,
@@ -139,6 +142,7 @@ pub struct PageToRender<'a> {
     pub date: &'a Option<String>,
     pub updated: &'a Option<String>,
     pub raw_content: &'a str,
+    pub content: &'a Vec<Element>,
     pub word_count: WordCount,
     pub read_time: ReadTime,
     pub extra: &'a toml::Table,
@@ -154,6 +158,7 @@ impl<'a> PageToRender<'a> {
             date: &page.meta.date,
             updated: &page.meta.updated,
             raw_content: &page.raw_content,
+            content: &page.content,
             word_count: page.word_count,
             read_time: page.read_time,
             extra: &page.meta.extra,

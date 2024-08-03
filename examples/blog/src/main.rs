@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use auk::*;
 use clap::{Parser, Subcommand};
 use razorbill::content::Taxonomy;
-use razorbill::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
+use razorbill::markdown::{MarkdownComponents, Shortcode};
 use razorbill::render::{PageToRender, RenderPageContext, RenderSectionContext};
 use razorbill::{plumage, Site};
 use serde::Deserialize;
@@ -34,23 +32,33 @@ async fn main() -> Result<()> {
             |ctx| {
                 page(PageProps {
                     ctx,
-                    children: vec![post(PostProps {
-                        text: &ctx.page.raw_content,
-                    })],
+                    children: vec![post(ctx.page.content.clone())],
                 })
             },
         )
         .add_page_template("prose", |ctx| {
             prose(ProseProps {
                 ctx,
-                children: vec![post(PostProps {
-                    text: &ctx.page.raw_content,
-                })],
+                children: vec![post(ctx.page.content.clone())],
             })
         })
-        .add_shortcode("say_hello", |_args: ()| {
-            div().class("heading").child(text("Hello, world")).into()
+        .with_markdown_components(MarkdownComponents {
+            p: Box::new(post_paragraph),
+            ..Default::default()
         })
+        .add_shortcode(
+            "say_hello",
+            Shortcode::new_thunk(|| div().class("heading").child("Hey there!").into()),
+        )
+        .add_shortcode(
+            "say",
+            Shortcode::new(|args: SayArgs| {
+                div()
+                    .class("heading")
+                    .child(format!("{}!", args.greeting))
+                    .into()
+            }),
+        )
         .add_taxonomy(
             Taxonomy {
                 name: "tags".into(),
@@ -262,33 +270,8 @@ struct SayArgs {
     pub greeting: String,
 }
 
-struct PostProps<'a> {
-    pub text: &'a str,
-}
-
-fn post(PostProps { text }: PostProps) -> HtmlElement {
-    div().children(markdown_with_shortcodes(
-        &text,
-        MarkdownComponents {
-            p: Box::new(post_paragraph),
-            ..Default::default()
-        },
-        HashMap::from_iter([
-            (
-                "say_hello".into(),
-                Shortcode::new_thunk(|| div().class("heading").child("Hey there!").into()),
-            ),
-            (
-                "say".into(),
-                Shortcode::new(|args: SayArgs| {
-                    div()
-                        .class("heading")
-                        .child(format!("{}!", args.greeting))
-                        .into()
-                }),
-            ),
-        ]),
-    ))
+fn post(content: Vec<Element>) -> HtmlElement {
+    div().children(content)
 }
 
 fn post_paragraph() -> HtmlElement {

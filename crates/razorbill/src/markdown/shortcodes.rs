@@ -47,12 +47,12 @@ pub struct ShortcodeCall {
 
 pub fn markdown_with_shortcodes(
     input: &str,
-    components: MarkdownComponents,
-    shortcodes: HashMap<String, Shortcode>,
+    components: &MarkdownComponents,
+    shortcodes: &HashMap<String, Shortcode>,
 ) -> Vec<Element> {
     let (output, shortcode_calls) = parse_document(input).unwrap();
     let elements = markdown(&output, components);
-    let elements = replace_shortcodes(elements, &shortcodes, &mut shortcode_calls.into_iter());
+    let elements = replace_shortcodes(elements, shortcodes, &mut shortcode_calls.into_iter());
 
     elements
 }
@@ -117,7 +117,7 @@ mod tests {
         text: &str,
         shortcodes: HashMap<String, Shortcode>,
     ) -> String {
-        let elements = markdown_with_shortcodes(text, MarkdownComponents::default(), shortcodes);
+        let elements = markdown_with_shortcodes(text, &MarkdownComponents::default(), &shortcodes);
 
         elements
             .into_iter()

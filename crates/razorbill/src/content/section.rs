@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::{fmt, fs, io};
 
+use auk::Element;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -18,6 +19,7 @@ pub struct Section {
     pub path: SectionPath,
     pub permalink: Permalink,
     pub raw_content: String,
+    pub content: Vec<Element>,
     pub word_count: WordCount,
     pub read_time: ReadTime,
     pub pages: Vec<PathBuf>,
@@ -131,6 +133,7 @@ impl Section {
             permalink: Permalink::from_path(config, path.0.as_str()),
             path,
             raw_content: content.to_string(),
+            content: Vec::new(),
             word_count: reading_metrics.word_count,
             read_time: reading_metrics.read_time,
             pages: Vec::new(),

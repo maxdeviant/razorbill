@@ -12,33 +12,33 @@ pub use shortcodes::*;
 use slug::slugify;
 
 pub struct MarkdownComponents {
-    pub div: Box<dyn Fn() -> HtmlElement>,
-    pub p: Box<dyn Fn() -> HtmlElement>,
-    pub h1: Box<dyn Fn() -> HtmlElement>,
-    pub h2: Box<dyn Fn() -> HtmlElement>,
-    pub h3: Box<dyn Fn() -> HtmlElement>,
-    pub h4: Box<dyn Fn() -> HtmlElement>,
-    pub h5: Box<dyn Fn() -> HtmlElement>,
-    pub h6: Box<dyn Fn() -> HtmlElement>,
-    pub table: Box<dyn Fn() -> HtmlElement>,
-    pub thead: Box<dyn Fn() -> HtmlElement>,
-    pub tr: Box<dyn Fn() -> HtmlElement>,
-    pub th: Box<dyn Fn() -> HtmlElement>,
-    pub td: Box<dyn Fn() -> HtmlElement>,
-    pub blockquote: Box<dyn Fn() -> HtmlElement>,
-    pub pre: Box<dyn Fn() -> HtmlElement>,
-    pub code: Box<dyn Fn() -> HtmlElement>,
-    pub ol: Box<dyn Fn() -> HtmlElement>,
-    pub ul: Box<dyn Fn() -> HtmlElement>,
-    pub li: Box<dyn Fn() -> HtmlElement>,
-    pub em: Box<dyn Fn() -> HtmlElement>,
-    pub strong: Box<dyn Fn() -> HtmlElement>,
-    pub del: Box<dyn Fn() -> HtmlElement>,
-    pub a: Box<dyn Fn() -> HtmlElement>,
-    pub img: Box<dyn Fn() -> HtmlElement>,
-    pub br: Box<dyn Fn() -> HtmlElement>,
-    pub hr: Box<dyn Fn() -> HtmlElement>,
-    pub sup: Box<dyn Fn() -> HtmlElement>,
+    pub div: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub p: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub h1: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub h2: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub h3: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub h4: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub h5: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub h6: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub table: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub thead: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub tr: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub th: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub td: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub blockquote: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub pre: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub code: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub ol: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub ul: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub li: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub em: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub strong: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub del: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub a: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub img: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub br: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub hr: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub sup: Box<dyn Fn() -> HtmlElement + Send + Sync>,
 }
 
 impl MarkdownComponents {
@@ -214,7 +214,7 @@ impl Default for MarkdownComponents {
     }
 }
 
-pub fn markdown(text: &str, components: MarkdownComponents) -> Vec<Element> {
+pub fn markdown(text: &str, components: &MarkdownComponents) -> Vec<Element> {
     let mut options = md::Options::empty();
     options.insert(md::Options::ENABLE_TABLES);
     options.insert(md::Options::ENABLE_FOOTNOTES);
@@ -306,7 +306,7 @@ where
     I: Iterator<Item = Event<'a>>,
 {
     input: I,
-    components: MarkdownComponents,
+    components: &'a MarkdownComponents,
     elements: Vec<Element>,
     current_element_stack: VecDeque<HtmlElement>,
     table_state: TableState,
@@ -319,7 +319,7 @@ impl<'a, I> HtmlElementWriter<'a, I>
 where
     I: Iterator<Item = Event<'a>>,
 {
-    pub fn new(input: I, components: MarkdownComponents) -> Self {
+    pub fn new(input: I, components: &'a MarkdownComponents) -> Self {
         Self {
             input,
             components,
@@ -581,7 +581,7 @@ mod tests {
     use super::*;
 
     fn parse_and_render_markdown(text: &str) -> String {
-        let elements = markdown(text, MarkdownComponents::default());
+        let elements = markdown(text, &MarkdownComponents::default());
 
         elements
             .into_iter()

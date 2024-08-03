@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::{fmt, fs};
 
+use auk::Element;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -21,6 +22,7 @@ pub struct Page {
     pub ancestors: Vec<PathBuf>,
     pub slug: String,
     pub raw_content: String,
+    pub content: Vec<Element>,
     pub word_count: WordCount,
     pub read_time: ReadTime,
 }
@@ -129,6 +131,7 @@ impl Page {
             ancestors: Vec::new(),
             slug,
             raw_content: content.to_string(),
+            content: Vec::new(),
             word_count: reading_metrics.word_count,
             read_time: reading_metrics.read_time,
         })

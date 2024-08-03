@@ -33,7 +33,7 @@ mod tests {
                 div().class("container").child(
                     div()
                         .class("content")
-                        .children(markdown(text, MarkdownComponents::default())),
+                        .children(markdown(text, &MarkdownComponents::default())),
                 ),
             ),
         );
