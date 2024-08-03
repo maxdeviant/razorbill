@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::content::{sort_pages_by, Page, Pages, Section, Sections, Taxonomy};
+use crate::content::{sort_pages_by, Page, Pages, Section, Sections, SortBy, Taxonomy};
 
 pub struct ContentAggregator {
     content_path: PathBuf,
@@ -109,6 +109,22 @@ impl ContentAggregator {
             reordered_pages.extend(unsorted_pages);
 
             section.pages = reordered_pages;
+        }
+
+        for (_taxonomy, pages_by_term) in self.taxonomies.iter_mut() {
+            for (_term, page_paths) in pages_by_term {
+                let pages = page_paths
+                    .iter()
+                    .map(|page| self.pages.get(page).unwrap())
+                    .collect::<Vec<_>>();
+
+                let (sorted_pages, unsorted_pages) = sort_pages_by(SortBy::Date, pages);
+
+                let mut reordered_pages = sorted_pages;
+                reordered_pages.extend(unsorted_pages);
+
+                *page_paths = reordered_pages;
+            }
         }
 
         (self.sections, self.pages, self.taxonomies)
