@@ -33,6 +33,7 @@ use crate::content::{
     Sections, Taxonomy,
 };
 use crate::markdown::Shortcode;
+use crate::permalink::Permalink;
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
 };
@@ -335,7 +336,46 @@ impl Site {
         render_sitemap(&self, &storage);
 
         for (taxonomy, pages_by_term) in &self.taxonomies {
-            dbg!(taxonomy, pages_by_term);
+            use auk::*;
+
+            let rendered_taxonomy_page = html().child(body().child(h1().child(taxonomy)).child(
+                ul().children(pages_by_term.keys().map(|term| {
+                    li().child(
+                        a().href(
+                            Permalink::from_path(&self.config, &format!("/{taxonomy}/{term}"))
+                                .as_str(),
+                        )
+                        .child(term),
+                    )
+                })),
+            ));
+
+            storage
+                .store_content(
+                    Permalink::from_path(&self.config, &format!("/{taxonomy}")),
+                    HtmlElementRenderer::new().render_to_string(&rendered_taxonomy_page)?,
+                )
+                .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+
+            for (term, pages) in pages_by_term {
+                let rendered_term_page = html().child(body().child(h1().child(term)).child(
+                    ul().children(pages.into_iter().map(|page_path| {
+                        let page = self.pages.get(page_path).unwrap();
+
+                        li().child(
+                            a().href(page.permalink.as_str())
+                                .child(page.meta.title.clone().unwrap_or_default()),
+                        )
+                    })),
+                ));
+
+                storage
+                    .store_content(
+                        Permalink::from_path(&self.config, &format!("/{taxonomy}/{term}")),
+                        HtmlElementRenderer::new().render_to_string(&rendered_term_page)?,
+                    )
+                    .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+            }
         }
 
         if let Some(sass_path) = self.sass_path.as_ref() {
