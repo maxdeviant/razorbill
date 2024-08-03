@@ -307,6 +307,8 @@ impl Site {
                 base: BaseRenderContext {
                     base_url: self.base_url(),
                     content_path: &self.content_path,
+                    markdown_components: &self.markdown_components,
+                    shortcodes: &self.shortcodes,
                     sections: &self.sections,
                     pages: &self.pages,
                 },
@@ -343,6 +345,8 @@ impl Site {
                 base: BaseRenderContext {
                     base_url: self.base_url(),
                     content_path: &self.content_path,
+                    markdown_components: &self.markdown_components,
+                    shortcodes: &self.shortcodes,
                     sections: &self.sections,
                     pages: &self.pages,
                 },
@@ -385,6 +389,8 @@ impl Site {
                 base: BaseRenderContext {
                     base_url: self.base_url(),
                     content_path: &self.content_path,
+                    markdown_components: &self.markdown_components,
+                    shortcodes: &self.shortcodes,
                     sections: &self.sections,
                     pages: &self.pages,
                 },
@@ -437,6 +443,8 @@ impl Site {
                     base: BaseRenderContext {
                         base_url: self.base_url(),
                         content_path: &self.content_path,
+                        markdown_components: &self.markdown_components,
+                        shortcodes: &self.shortcodes,
                         sections: &self.sections,
                         pages: &self.pages,
                     },

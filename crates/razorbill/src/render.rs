@@ -6,10 +6,13 @@ use auk::Element;
 use serde::Deserialize;
 
 use crate::content::{Page, Pages, ReadTime, Section, Sections, WordCount};
+use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
 
 pub struct BaseRenderContext<'a> {
     pub(crate) base_url: &'a str,
     pub(crate) content_path: &'a Path,
+    pub(crate) markdown_components: &'a MarkdownComponents,
+    pub(crate) shortcodes: &'a HashMap<String, Shortcode>,
     pub(crate) sections: &'a Sections,
     pub(crate) pages: &'a Pages,
 }
@@ -17,6 +20,11 @@ pub struct BaseRenderContext<'a> {
 impl<'a> BaseRenderContext<'a> {
     pub fn base_url(&self) -> &'a str {
         self.base_url
+    }
+
+    /// Renders the provided Markdown text.
+    pub fn render_markdown(&self, text: &str) -> Vec<Element> {
+        markdown_with_shortcodes(text, self.markdown_components, self.shortcodes)
     }
 
     pub fn get_section(&self, path: impl AsRef<Path>) -> Option<SectionToRender<'a>> {
