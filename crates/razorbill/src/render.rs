@@ -153,6 +153,7 @@ pub struct PageToRender<'a> {
     pub content: &'a Vec<Element>,
     pub word_count: WordCount,
     pub read_time: ReadTime,
+    pub taxonomies: &'a HashMap<String, Vec<String>>,
     pub extra: &'a toml::Table,
 }
 
@@ -169,6 +170,7 @@ impl<'a> PageToRender<'a> {
             content: &page.content,
             word_count: page.word_count,
             read_time: page.read_time,
+            taxonomies: &page.meta.taxonomies,
             extra: &page.meta.extra,
         }
     }
