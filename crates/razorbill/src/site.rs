@@ -30,12 +30,14 @@ use ws::{Message, Sender, WebSocket};
 
 use crate::content::{
     ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
-    Sections, Taxonomy,
+    Sections, Taxonomy, TaxonomyTerm,
 };
 use crate::markdown::Shortcode;
 use crate::permalink::Permalink;
 use crate::render::{
-    BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
+    BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext,
+    RenderTaxonomyContext, RenderTaxonomyTermContext, SectionToRender, TaxonomyTermToRender,
+    TaxonomyToRender,
 };
 use crate::sitemap::render_sitemap;
 use crate::storage::{DiskStorage, InMemoryStorage, Store};
@@ -52,10 +54,16 @@ pub type RenderSection = Arc<dyn Fn(&RenderSectionContext) -> HtmlElement + Send
 
 pub type RenderPage = Arc<dyn Fn(&RenderPageContext) -> HtmlElement + Send + Sync>;
 
+pub type RenderTaxonomy = Arc<dyn Fn(&RenderTaxonomyContext) -> HtmlElement + Send + Sync>;
+
+pub type RenderTaxonomyTerm = Arc<dyn Fn(&RenderTaxonomyTermContext) -> HtmlElement + Send + Sync>;
+
 struct Templates {
     pub index: RenderIndex,
     pub section: HashMap<TemplateKey, RenderSection>,
     pub page: HashMap<TemplateKey, RenderPage>,
+    pub taxonomy: HashMap<String, RenderTaxonomy>,
+    pub taxonomy_term: HashMap<String, RenderTaxonomyTerm>,
 }
 
 #[derive(Error, Debug)]
@@ -336,19 +344,51 @@ impl Site {
         render_sitemap(&self, &storage);
 
         for (taxonomy, pages_by_term) in &self.taxonomies {
-            use auk::*;
+            let taxonomy_template = self
+                .templates
+                .taxonomy
+                .get(taxonomy)
+                .expect("taxonomy template not found for {taxonomy:?}");
 
-            let rendered_taxonomy_page = html().child(body().child(h1().child(taxonomy)).child(
-                ul().children(pages_by_term.keys().map(|term| {
-                    li().child(
-                        a().href(
-                            Permalink::from_path(&self.config, &format!("/{taxonomy}/{term}"))
-                                .as_str(),
-                        )
-                        .child(term),
-                    )
-                })),
-            ));
+            let terms = pages_by_term
+                .iter()
+                .map(|(term, pages)| TaxonomyTerm {
+                    name: term.clone(),
+                    permalink: Permalink::from_path(&self.config, &format!("/{taxonomy}/{term}")),
+                    pages: pages.clone(),
+                })
+                .collect::<Vec<_>>();
+
+            let ctx = RenderTaxonomyContext {
+                base: BaseRenderContext {
+                    base_url: self.base_url(),
+                    content_path: &self.content_path,
+                    sections: &self.sections,
+                    pages: &self.pages,
+                },
+                taxonomy: TaxonomyToRender {
+                    name: taxonomy.as_str(),
+                    terms: terms
+                        .iter()
+                        .map(|term| {
+                            let pages = term
+                                .pages
+                                .iter()
+                                .map(|page| self.pages.get(page).unwrap())
+                                .map(PageToRender::from_page)
+                                .collect::<Vec<_>>();
+
+                            TaxonomyTermToRender {
+                                name: term.name.as_str(),
+                                permalink: term.permalink.as_str(),
+                                pages,
+                            }
+                        })
+                        .collect(),
+                },
+            };
+
+            let rendered_taxonomy_page = taxonomy_template(&ctx);
 
             storage
                 .store_content(
@@ -358,16 +398,34 @@ impl Site {
                 .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
 
             for (term, pages) in pages_by_term {
-                let rendered_term_page = html().child(body().child(h1().child(term)).child(
-                    ul().children(pages.into_iter().map(|page_path| {
-                        let page = self.pages.get(page_path).unwrap();
+                let term_template = self
+                    .templates
+                    .taxonomy_term
+                    .get(taxonomy)
+                    .expect("taxonomy term template not found for {taxonomy:?}");
 
-                        li().child(
-                            a().href(page.permalink.as_str())
-                                .child(page.meta.title.clone().unwrap_or_default()),
-                        )
-                    })),
-                ));
+                let permalink = Permalink::from_path(&self.config, &format!("/{taxonomy}/{term}"));
+                let pages = pages
+                    .iter()
+                    .map(|page| self.pages.get(page).unwrap())
+                    .map(PageToRender::from_page)
+                    .collect::<Vec<_>>();
+
+                let ctx = RenderTaxonomyTermContext {
+                    base: BaseRenderContext {
+                        base_url: self.base_url(),
+                        content_path: &self.content_path,
+                        sections: &self.sections,
+                        pages: &self.pages,
+                    },
+                    term: TaxonomyTermToRender {
+                        name: term.as_str(),
+                        permalink: permalink.as_str(),
+                        pages,
+                    },
+                };
+
+                let rendered_term_page = term_template(&ctx);
 
                 storage
                     .store_content(
@@ -679,6 +737,8 @@ impl SiteBuilder<()> {
                 index: Arc::new(|_| auk::div()),
                 section: HashMap::new(),
                 page: HashMap::new(),
+                taxonomy: HashMap::new(),
+                taxonomy_term: HashMap::new(),
             },
             shortcodes: HashMap::new(),
             taxonomies: Vec::new(),
@@ -722,6 +782,8 @@ impl SiteBuilder<WithBaseUrl> {
                     Arc::new(section) as RenderSection,
                 )]),
                 page: HashMap::from_iter([(TemplateKey::Default, Arc::new(page) as RenderPage)]),
+                taxonomy: HashMap::new(),
+                taxonomy_term: HashMap::new(),
             },
             ..self.coerce()
         }
@@ -769,7 +831,18 @@ impl SiteBuilder<WithTemplates> {
         self
     }
 
-    pub fn add_taxonomy(mut self, taxonomy: Taxonomy) -> Self {
+    pub fn add_taxonomy(
+        mut self,
+        taxonomy: Taxonomy,
+        template: impl Fn(&RenderTaxonomyContext) -> HtmlElement + Send + Sync + 'static,
+        term_template: impl Fn(&RenderTaxonomyTermContext) -> HtmlElement + Send + Sync + 'static,
+    ) -> Self {
+        self.templates
+            .taxonomy
+            .insert(taxonomy.name.clone(), Arc::new(template));
+        self.templates
+            .taxonomy_term
+            .insert(taxonomy.name.clone(), Arc::new(term_template));
         self.taxonomies.push(taxonomy);
         self
     }

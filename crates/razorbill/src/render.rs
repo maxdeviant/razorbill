@@ -167,3 +167,40 @@ impl<'a> PageToRender<'a> {
         T::deserialize(self.extra.clone())
     }
 }
+
+pub struct RenderTaxonomyContext<'a> {
+    pub(crate) base: BaseRenderContext<'a>,
+    pub taxonomy: TaxonomyToRender<'a>,
+}
+
+impl<'a> Deref for RenderTaxonomyContext<'a> {
+    type Target = BaseRenderContext<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+pub struct TaxonomyToRender<'a> {
+    pub name: &'a str,
+    pub terms: Vec<TaxonomyTermToRender<'a>>,
+}
+
+pub struct RenderTaxonomyTermContext<'a> {
+    pub(crate) base: BaseRenderContext<'a>,
+    pub term: TaxonomyTermToRender<'a>,
+}
+
+impl<'a> Deref for RenderTaxonomyTermContext<'a> {
+    type Target = BaseRenderContext<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
+}
+
+pub struct TaxonomyTermToRender<'a> {
+    pub name: &'a str,
+    pub permalink: &'a str,
+    pub pages: Vec<PageToRender<'a>>,
+}

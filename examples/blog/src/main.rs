@@ -51,9 +51,33 @@ async fn main() -> Result<()> {
         .add_shortcode("say_hello", |_args: ()| {
             div().class("heading").child(text("Hello, world")).into()
         })
-        .add_taxonomy(Taxonomy {
-            name: "tags".into(),
-        })
+        .add_taxonomy(
+            Taxonomy {
+                name: "tags".into(),
+            },
+            |ctx| {
+                html().child(
+                    body().child(h1().child(ctx.taxonomy.name)).child(
+                        ul().children(
+                            ctx.taxonomy
+                                .terms
+                                .iter()
+                                .map(|term| li().child(a().href(term.permalink).child(term.name))),
+                        ),
+                    ),
+                )
+            },
+            |ctx| {
+                html().child(body().child(h1().child(ctx.term.name)).child(ul().children(
+                    ctx.term.pages.iter().map(|page| {
+                        li().child(
+                            a().href(page.permalink)
+                                .child(page.title.clone().unwrap_or_default()),
+                        )
+                    }),
+                )))
+            },
+        )
         .with_sass("sass")
         .build();
 

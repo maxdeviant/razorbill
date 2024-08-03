@@ -9,9 +9,8 @@ pub struct Taxonomy {
 
 /// A taxonomy term.
 #[derive(Debug)]
-pub struct Term {
+pub struct TaxonomyTerm {
     pub name: String,
-    pub slug: String,
     pub permalink: Permalink,
     pub pages: Vec<PathBuf>,
 }
