@@ -345,6 +345,19 @@ where
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
                         element.extend([escape_html(&text).into()]);
                     }
+
+                    // Add alt text to `img`s.
+                    if let Some(image) = self
+                        .current_element_stack
+                        .iter_mut()
+                        .rfind(|element| element.tag_name == "img")
+                    {
+                        image
+                            .attrs
+                            .entry("alt".to_string())
+                            .or_default()
+                            .push_str(&escape_html(&text));
+                    }
                 }
                 Event::Code(text) => {
                     self.write(self.components.code().child(escape_html(&text)));
@@ -504,7 +517,6 @@ where
                 self.components
                     .img()
                     .src(escape_href(&dest))
-                    // TODO: Add `alt` text.
                     .title::<String>(
                         Some(title)
                             .filter(|title| !title.is_empty())
@@ -633,6 +645,25 @@ mod tests {
             - `One`
             - `Two`
             - `Three`
+        "};
+
+        insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
+    }
+
+    #[test]
+    fn test_markdown_image() {
+        let text = indoc! {"
+            Check out this cool image:
+
+            ![very cool image](https://example.com/cool-image.png)
+
+            This painting is beautiful:
+
+            ![A photo of _Sunflowers_ by Van Gogh](https://example.com/sunflowers.png)
+
+            Here's a picture of a less-than sign:
+
+            ![A picture of a < sign](https://example.com/less-than.png)
         "};
 
         insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
