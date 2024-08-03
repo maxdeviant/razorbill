@@ -8,6 +8,7 @@ use std::sync::{Arc, RwLock};
 use thiserror::Error;
 
 use crate::content::{Page, Section};
+use crate::permalink::Permalink;
 
 pub trait Store {
     type Error: std::error::Error;
@@ -16,9 +17,15 @@ pub trait Store {
         &self,
         section: &Section,
         rendered_html: String,
-    ) -> Result<(), Self::Error>;
+    ) -> Result<(), Self::Error> {
+        self.store_content(section.permalink.clone(), rendered_html.clone())
+    }
 
-    fn store_rendered_page(&self, page: &Page, rendered_html: String) -> Result<(), Self::Error>;
+    fn store_rendered_page(&self, page: &Page, rendered_html: String) -> Result<(), Self::Error> {
+        self.store_content(page.permalink.clone(), rendered_html.clone())
+    }
+
+    fn store_content(&self, permalink: Permalink, content: String) -> Result<(), Self::Error>;
 
     fn store_static_file(&self, path: &Path, content: String) -> Result<(), Self::Error>;
 }
@@ -36,43 +43,21 @@ impl DiskStorage {
 impl Store for DiskStorage {
     type Error = io::Error;
 
-    fn store_rendered_section(
-        &self,
-        section: &Section,
-        rendered_html: String,
-    ) -> Result<(), Self::Error> {
-        let output_dir = self.output_path.join(
-            PathBuf::from_str(
-                &section
-                    .path
-                    .0
-                    .trim_end_matches("/_index")
-                    .trim_start_matches("/"),
-            )
-            .unwrap(),
-        );
-
-        fs::create_dir_all(&output_dir)?;
-
-        let output_path = output_dir.join("index.html");
-        let mut output_file = File::create(&output_path)?;
-
-        output_file.write_all(rendered_html.as_bytes())?;
-
-        Ok(())
-    }
-
-    fn store_rendered_page(&self, page: &Page, rendered_html: String) -> Result<(), Self::Error> {
+    fn store_content(&self, permalink: Permalink, content: String) -> Result<(), Self::Error> {
         let output_dir = self
             .output_path
-            .join(PathBuf::from_str(&page.path.0.trim_start_matches("/")).unwrap());
+            .join(PathBuf::from_str(permalink.path().trim_start_matches("/")).unwrap());
 
         fs::create_dir_all(&output_dir)?;
 
-        let output_path = output_dir.join("index.html");
-        let mut output_file = File::create(&output_path)?;
+        let output_path = if permalink.path().ends_with('/') {
+            output_dir.join("index.html")
+        } else {
+            output_dir
+        };
 
-        output_file.write_all(rendered_html.as_bytes())?;
+        let mut output_file = File::create(&output_path)?;
+        output_file.write_all(content.as_bytes())?;
 
         Ok(())
     }
@@ -114,24 +99,11 @@ pub enum InMemoryStorageError {
 impl Store for InMemoryStorage {
     type Error = InMemoryStorageError;
 
-    fn store_rendered_section(
-        &self,
-        section: &Section,
-        rendered_html: String,
-    ) -> Result<(), Self::Error> {
+    fn store_content(&self, permalink: Permalink, content: String) -> Result<(), Self::Error> {
         self.storage
             .write()
             .map_err(|_| InMemoryStorageError::Poisoned)?
-            .insert(section.permalink.path().to_owned(), rendered_html);
-
-        Ok(())
-    }
-
-    fn store_rendered_page(&self, page: &Page, rendered_html: String) -> Result<(), Self::Error> {
-        self.storage
-            .write()
-            .map_err(|_| InMemoryStorageError::Poisoned)?
-            .insert(page.permalink.path().to_owned(), rendered_html);
+            .insert(permalink.path().to_owned(), content);
 
         Ok(())
     }
