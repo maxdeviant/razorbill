@@ -175,6 +175,7 @@ mod tests {
     fn make_section(filepath: &str, sort_by: MaybeSortBy) -> Section {
         let config = SiteConfig {
             base_url: "https://example.com".to_string(),
+            title: None,
             taxonomies: Vec::new(),
         };
 
@@ -201,6 +202,7 @@ mod tests {
     fn make_page(filepath: &str, date: &str) -> Page {
         let config = SiteConfig {
             base_url: "https://example.com".to_string(),
+            title: None,
             taxonomies: Vec::new(),
         };
 

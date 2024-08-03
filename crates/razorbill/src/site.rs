@@ -31,6 +31,7 @@ use crate::content::{
     ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
     Sections, Taxonomy, TaxonomyTerm,
 };
+use crate::feed::render_feed;
 use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
 use crate::permalink::Permalink;
 use crate::render::{
@@ -139,6 +140,7 @@ impl<'a> MutVisitor for LinkReplacer<'a> {
 
 struct BuildSiteParams {
     base_url: String,
+    title: Option<String>,
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
     templates: Templates,
@@ -149,11 +151,12 @@ struct BuildSiteParams {
 
 pub struct SiteConfig {
     pub base_url: String,
+    pub title: Option<String>,
     pub taxonomies: Vec<Taxonomy>,
 }
 
 pub struct Site {
-    config: SiteConfig,
+    pub(crate) config: SiteConfig,
     root_path: PathBuf,
     content_path: PathBuf,
     /// The path to the `static` directory that houses static assets.
@@ -180,6 +183,7 @@ impl Site {
         Site {
             config: SiteConfig {
                 base_url: params.base_url,
+                title: params.title,
                 taxonomies: params.taxonomies,
             },
             root_path: root_path.to_owned(),
@@ -366,6 +370,7 @@ impl Site {
         }
 
         render_sitemap(&self, &storage);
+        render_feed(&self, self.pages.values().collect(), &storage);
 
         for (taxonomy, pages_by_term) in &self.taxonomies {
             let taxonomy_template = self
@@ -767,6 +772,7 @@ pub struct SiteBuilder<State> {
     state: PhantomData<State>,
     root_path: PathBuf,
     base_url: String,
+    title: Option<String>,
     templates: Templates,
     markdown_components: MarkdownComponents,
     shortcodes: HashMap<String, Shortcode>,
@@ -780,6 +786,7 @@ impl<State> SiteBuilder<State> {
             state: PhantomData,
             root_path: self.root_path,
             base_url: self.base_url,
+            title: self.title,
             templates: self.templates,
             markdown_components: self.markdown_components,
             shortcodes: self.shortcodes,
@@ -791,6 +798,7 @@ impl<State> SiteBuilder<State> {
     fn build_site(self) -> Site {
         Site::from_params(BuildSiteParams {
             base_url: self.base_url,
+            title: self.title,
             root_path: self.root_path,
             sass_path: self.sass_path,
             templates: self.templates,
@@ -807,6 +815,7 @@ impl SiteBuilder<()> {
             state: PhantomData,
             root_path: PathBuf::new(),
             base_url: String::new(),
+            title: None,
             templates: Templates {
                 index: Arc::new(|_| auk::div()),
                 section: HashMap::new(),
@@ -843,6 +852,11 @@ impl SiteBuilder<WithRootPath> {
 pub struct WithBaseUrl;
 
 impl SiteBuilder<WithBaseUrl> {
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
     pub fn templates(
         self,
         index: impl Fn(&RenderSectionContext) -> HtmlElement + Send + Sync + 'static,

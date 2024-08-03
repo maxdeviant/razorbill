@@ -41,6 +41,7 @@ mod tests {
     fn make_config(base_url: &str) -> SiteConfig {
         SiteConfig {
             base_url: base_url.to_string(),
+            title: None,
             taxonomies: Vec::new(),
         }
     }
