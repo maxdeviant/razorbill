@@ -263,6 +263,8 @@ impl Site {
     }
 
     fn render_to(&mut self, storage: impl Store) -> Result<(), RenderSiteError> {
+        self.render_aliases(&storage);
+
         for section in self.sections.values() {
             let section_template = if section.path == SectionPath("/_index".to_string()) {
                 &self.templates.index
@@ -477,6 +479,47 @@ impl Site {
         }
 
         Ok(())
+    }
+
+    fn render_aliases(&self, storage: &impl Store) {
+        for section in self.sections.values() {
+            for alias in &section.meta.aliases {
+                self.render_alias(alias, &section.permalink, storage);
+            }
+        }
+
+        for page in self.pages.values() {
+            for alias in &page.meta.aliases {
+                self.render_alias(alias, &page.permalink, storage);
+            }
+        }
+    }
+
+    fn render_alias(&self, alias: &str, permalink: &Permalink, storage: &impl Store) {
+        use auk::*;
+
+        let url = permalink.as_str();
+        let alias_template = html()
+            .child(meta().charset("utf-8"))
+            .child(link().rel("canonical").href(url))
+            .child(
+                meta()
+                    .http_equiv("refresh")
+                    .content(format!("0; url={url}")),
+            )
+            .child(title().child("Redirect"))
+            .child(
+                p().child(a().href(url).child("Click here"))
+                    .child(" to be redirected."),
+            );
+
+        let html = HtmlElementRenderer::new()
+            .render_to_string(&alias_template)
+            .unwrap();
+
+        storage
+            .store_content(Permalink::from_path(&self.config, alias), html)
+            .unwrap();
     }
 
     pub fn build(mut self) -> Result<()> {

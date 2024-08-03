@@ -63,6 +63,9 @@ pub struct SectionFrontMatter {
     pub transparent: bool,
 
     #[serde(default)]
+    pub aliases: Vec<String>,
+
+    #[serde(default)]
     pub extra: toml::Table,
 }
 
