@@ -1,21 +1,29 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::content::{sort_pages_by, Page, Pages, Section, Sections};
+use crate::content::{sort_pages_by, Page, Pages, Section, Sections, Taxonomy};
 
 pub struct ContentAggregator {
     content_path: PathBuf,
     sections: Sections,
     pages: Pages,
+    taxonomies: HashMap<String, HashMap<String, Vec<PathBuf>>>,
 }
 
 impl ContentAggregator {
     /// Returns a new [`ContentAggregator`].
-    pub fn new(content_path: PathBuf) -> Self {
+    pub fn new(content_path: PathBuf, taxonomy_definitions: Vec<Taxonomy>) -> Self {
+        let mut taxonomies = HashMap::new();
+
+        for taxonomy in taxonomy_definitions {
+            taxonomies.insert(taxonomy.name.clone(), HashMap::new());
+        }
+
         Self {
             content_path,
             sections: Sections::default(),
             pages: Pages::default(),
+            taxonomies,
         }
     }
 
@@ -26,11 +34,28 @@ impl ContentAggregator {
 
     /// Adds the given [`Page`] to the aggregate.
     pub fn add_page(&mut self, page: Page) {
+        for (taxonomy_name, terms) in &page.meta.taxonomies {
+            let Some(pages_by_term) = self.taxonomies.get_mut(taxonomy_name) else {
+                continue;
+            };
+
+            for term in terms {
+                let pages = pages_by_term.entry(term.clone()).or_default();
+                pages.push(page.file.path.clone());
+            }
+        }
+
         self.pages.insert(page.file.path.clone(), page);
     }
 
-    /// Aggregates and returns all of the sections and pages in the aggregate.
-    pub fn aggregate(mut self) -> (Sections, Pages) {
+    /// Aggregates and returns all of the sections, pages, and taxonomies in the aggregate.
+    pub fn aggregate(
+        mut self,
+    ) -> (
+        Sections,
+        Pages,
+        HashMap<String, HashMap<String, Vec<PathBuf>>>,
+    ) {
         let ancestors = self.build_ancestors();
 
         for (path, page) in self.pages.iter_mut() {
@@ -86,7 +111,7 @@ impl ContentAggregator {
             section.pages = reordered_pages;
         }
 
-        (self.sections, self.pages)
+        (self.sections, self.pages, self.taxonomies)
     }
 
     fn build_ancestors(&self) -> HashMap<PathBuf, Vec<PathBuf>> {
@@ -134,6 +159,7 @@ mod tests {
     fn make_section(filepath: &str, sort_by: MaybeSortBy) -> Section {
         let config = SiteConfig {
             base_url: "https://example.com".to_string(),
+            taxonomies: Vec::new(),
         };
 
         let root_path = PathBuf::new();
@@ -158,6 +184,7 @@ mod tests {
     fn make_page(filepath: &str, date: &str) -> Page {
         let config = SiteConfig {
             base_url: "https://example.com".to_string(),
+            taxonomies: Vec::new(),
         };
 
         let root_path = PathBuf::new();
@@ -182,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_aggregate() {
-        let mut aggregator = ContentAggregator::new(PathBuf::from("content"));
+        let mut aggregator = ContentAggregator::new(PathBuf::from("content"), Vec::new());
 
         let sections = vec![
             ("content/_index.md", MaybeSortBy::None),
@@ -202,7 +229,7 @@ mod tests {
             aggregator.add_page(make_page(filepath, date));
         }
 
-        let (sections, pages) = aggregator.aggregate();
+        let (sections, pages, _taxonomies) = aggregator.aggregate();
 
         let blog_section = sections
             .get(&PathBuf::from("content/blog/_index.md"))

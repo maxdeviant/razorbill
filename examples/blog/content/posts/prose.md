@@ -1,6 +1,8 @@
 +++
 title = "Prose"
 template = "prose"
+[taxonomies]
+tags = ["prose"]
 +++
 
 # Prose

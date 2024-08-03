@@ -1,5 +1,7 @@
 +++
 title = "Hello, world!"
+[taxonomies]
+tags = ["hello", "world"]
 +++
 
 # Hello, world!

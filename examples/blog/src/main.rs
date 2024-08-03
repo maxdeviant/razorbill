@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use auk::*;
 use clap::{Parser, Subcommand};
+use razorbill::content::Taxonomy;
 use razorbill::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
 use razorbill::render::{PageToRender, RenderPageContext, RenderSectionContext};
 use razorbill::{plumage, Site};
@@ -49,6 +50,9 @@ async fn main() -> Result<()> {
         })
         .add_shortcode("say_hello", |_args: ()| {
             div().class("heading").child(text("Hello, world")).into()
+        })
+        .add_taxonomy(Taxonomy {
+            name: "tags".into(),
         })
         .with_sass("sass")
         .build();

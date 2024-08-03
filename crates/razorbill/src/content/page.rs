@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::{fmt, fs};
 
@@ -60,6 +61,8 @@ pub struct PageFrontMatter {
     #[serde(default, deserialize_with = "from_toml_datetime")]
     pub updated: Option<String>,
     pub template: Option<String>,
+    #[serde(default)]
+    pub taxonomies: HashMap<String, Vec<String>>,
 
     #[serde(default)]
     pub extra: toml::Table,

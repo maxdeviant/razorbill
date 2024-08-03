@@ -30,7 +30,7 @@ use ws::{Message, Sender, WebSocket};
 
 use crate::content::{
     ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
-    Sections,
+    Sections, Taxonomy,
 };
 use crate::markdown::Shortcode;
 use crate::render::{
@@ -135,10 +135,12 @@ struct BuildSiteParams {
     sass_path: Option<PathBuf>,
     templates: Templates,
     shortcodes: HashMap<String, Shortcode>,
+    taxonomies: Vec<Taxonomy>,
 }
 
 pub struct SiteConfig {
     pub base_url: String,
+    pub taxonomies: Vec<Taxonomy>,
 }
 
 pub struct Site {
@@ -153,6 +155,7 @@ pub struct Site {
     shortcodes: HashMap<String, Shortcode>,
     pub(crate) sections: Sections,
     pub(crate) pages: Pages,
+    taxonomies: HashMap<String, HashMap<String, Vec<PathBuf>>>,
     is_serving: bool,
 }
 
@@ -167,6 +170,7 @@ impl Site {
         Site {
             config: SiteConfig {
                 base_url: params.base_url,
+                taxonomies: params.taxonomies,
             },
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
@@ -177,6 +181,7 @@ impl Site {
             shortcodes: params.shortcodes,
             sections: Sections::default(),
             pages: Pages::default(),
+            taxonomies: HashMap::new(),
             is_serving: false,
         }
     }
@@ -221,7 +226,8 @@ impl Site {
             }
         }
 
-        let mut aggregator = ContentAggregator::new(self.content_path.clone());
+        let mut aggregator =
+            ContentAggregator::new(self.content_path.clone(), self.config.taxonomies.clone());
 
         for section in sections {
             aggregator.add_section(section);
@@ -231,9 +237,10 @@ impl Site {
             aggregator.add_page(page);
         }
 
-        let (sections, pages) = aggregator.aggregate();
+        let (sections, pages, taxonomies) = aggregator.aggregate();
         self.sections = sections;
         self.pages = pages;
+        self.taxonomies = taxonomies;
 
         Ok(())
     }
@@ -326,6 +333,10 @@ impl Site {
         }
 
         render_sitemap(&self, &storage);
+
+        for (taxonomy, pages_by_term) in &self.taxonomies {
+            dbg!(taxonomy, pages_by_term);
+        }
 
         if let Some(sass_path) = self.sass_path.as_ref() {
             fn is_sass(entry: &walkdir::DirEntry) -> bool {
@@ -589,6 +600,7 @@ pub struct SiteBuilder<State> {
     base_url: String,
     templates: Templates,
     shortcodes: HashMap<String, Shortcode>,
+    taxonomies: Vec<Taxonomy>,
     sass_path: Option<PathBuf>,
 }
 
@@ -600,6 +612,7 @@ impl<State> SiteBuilder<State> {
             base_url: self.base_url,
             templates: self.templates,
             shortcodes: self.shortcodes,
+            taxonomies: self.taxonomies,
             sass_path: self.sass_path,
         }
     }
@@ -611,6 +624,7 @@ impl<State> SiteBuilder<State> {
             sass_path: self.sass_path,
             templates: self.templates,
             shortcodes: self.shortcodes,
+            taxonomies: self.taxonomies,
         })
     }
 }
@@ -627,6 +641,7 @@ impl SiteBuilder<()> {
                 page: HashMap::new(),
             },
             shortcodes: HashMap::new(),
+            taxonomies: Vec::new(),
             sass_path: None,
         }
     }
@@ -711,6 +726,11 @@ impl SiteBuilder<WithTemplates> {
                 }),
             },
         );
+        self
+    }
+
+    pub fn add_taxonomy(mut self, taxonomy: Taxonomy) -> Self {
+        self.taxonomies.push(taxonomy);
         self
     }
 
