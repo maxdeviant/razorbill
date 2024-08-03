@@ -350,7 +350,7 @@ impl Site {
                 .get(taxonomy)
                 .expect("taxonomy template not found for {taxonomy:?}");
 
-            let terms = pages_by_term
+            let mut terms = pages_by_term
                 .iter()
                 .map(|(term, pages)| TaxonomyTerm {
                     name: term.clone(),
@@ -358,6 +358,8 @@ impl Site {
                     pages: pages.clone(),
                 })
                 .collect::<Vec<_>>();
+
+            terms.sort_by(|a, b| a.name.cmp(&b.name));
 
             let ctx = RenderTaxonomyContext {
                 base: BaseRenderContext {
