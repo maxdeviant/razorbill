@@ -36,6 +36,8 @@ impl Permalink {
 mod tests {
     use pretty_assertions::assert_eq;
 
+    use crate::content::AVERAGE_ADULT_WPM;
+
     use super::*;
 
     fn make_config(base_url: &str) -> SiteConfig {
@@ -43,6 +45,7 @@ mod tests {
             base_url: base_url.to_string(),
             title: None,
             taxonomies: Vec::new(),
+            reading_speed: AVERAGE_ADULT_WPM,
         }
     }
 

@@ -8,7 +8,6 @@ use thiserror::Error;
 
 use crate::content::{
     from_toml_datetime, parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount,
-    AVERAGE_ADULT_WPM,
 };
 use crate::permalink::Permalink;
 use crate::SiteConfig;
@@ -121,7 +120,7 @@ impl Page {
 
         let path = PagePath::from_file_path(root_path, &file.path).unwrap();
 
-        let reading_metrics = ReadingMetrics::for_content(&content, AVERAGE_ADULT_WPM);
+        let reading_metrics = ReadingMetrics::for_content(&content, config.reading_speed);
 
         Ok(Self {
             meta: front_matter,

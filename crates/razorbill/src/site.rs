@@ -29,7 +29,7 @@ use ws::{Message, Sender, WebSocket};
 
 use crate::content::{
     ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
-    Sections, Taxonomy, TaxonomyTerm,
+    Sections, Taxonomy, TaxonomyTerm, AVERAGE_ADULT_WPM,
 };
 use crate::feed::render_feed;
 use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
@@ -141,6 +141,7 @@ impl<'a> MutVisitor for LinkReplacer<'a> {
 struct BuildSiteParams {
     base_url: String,
     title: Option<String>,
+    reading_speed: usize,
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
     templates: Templates,
@@ -153,6 +154,8 @@ pub struct SiteConfig {
     pub base_url: String,
     pub title: Option<String>,
     pub taxonomies: Vec<Taxonomy>,
+    /// The reading speed (in WPM) to use when determining reading time.
+    pub reading_speed: usize,
 }
 
 pub struct Site {
@@ -185,6 +188,7 @@ impl Site {
                 base_url: params.base_url,
                 title: params.title,
                 taxonomies: params.taxonomies,
+                reading_speed: params.reading_speed,
             },
             root_path: root_path.to_owned(),
             content_path: root_path.join("content"),
@@ -773,6 +777,7 @@ pub struct SiteBuilder<State> {
     root_path: PathBuf,
     base_url: String,
     title: Option<String>,
+    reading_speed: usize,
     templates: Templates,
     markdown_components: MarkdownComponents,
     shortcodes: HashMap<String, Shortcode>,
@@ -787,6 +792,7 @@ impl<State> SiteBuilder<State> {
             root_path: self.root_path,
             base_url: self.base_url,
             title: self.title,
+            reading_speed: self.reading_speed,
             templates: self.templates,
             markdown_components: self.markdown_components,
             shortcodes: self.shortcodes,
@@ -799,6 +805,7 @@ impl<State> SiteBuilder<State> {
         Site::from_params(BuildSiteParams {
             base_url: self.base_url,
             title: self.title,
+            reading_speed: self.reading_speed,
             root_path: self.root_path,
             sass_path: self.sass_path,
             templates: self.templates,
@@ -806,6 +813,11 @@ impl<State> SiteBuilder<State> {
             shortcodes: self.shortcodes,
             taxonomies: self.taxonomies,
         })
+    }
+
+    pub fn reading_speed(mut self, wpm: usize) -> Self {
+        self.reading_speed = wpm;
+        self
     }
 }
 
@@ -816,6 +828,7 @@ impl SiteBuilder<()> {
             root_path: PathBuf::new(),
             base_url: String::new(),
             title: None,
+            reading_speed: AVERAGE_ADULT_WPM,
             templates: Templates {
                 index: Arc::new(|_| auk::div()),
                 section: HashMap::new(),

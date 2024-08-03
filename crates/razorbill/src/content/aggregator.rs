@@ -165,7 +165,7 @@ mod tests {
 
     use crate::content::{
         FileInfo, MaybeSortBy, PageFrontMatter, PagePath, ReadTime, SectionFrontMatter,
-        SectionPath, SortBy, WordCount,
+        SectionPath, SortBy, WordCount, AVERAGE_ADULT_WPM,
     };
     use crate::permalink::Permalink;
     use crate::SiteConfig;
@@ -177,6 +177,7 @@ mod tests {
             base_url: "https://example.com".to_string(),
             title: None,
             taxonomies: Vec::new(),
+            reading_speed: AVERAGE_ADULT_WPM,
         };
 
         let root_path = PathBuf::new();
@@ -204,6 +205,7 @@ mod tests {
             base_url: "https://example.com".to_string(),
             title: None,
             taxonomies: Vec::new(),
+            reading_speed: AVERAGE_ADULT_WPM,
         };
 
         let root_path = PathBuf::new();

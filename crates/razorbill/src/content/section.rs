@@ -7,7 +7,6 @@ use thiserror::Error;
 
 use crate::content::{
     parse_front_matter, FileInfo, MaybeSortBy, ReadTime, ReadingMetrics, WordCount,
-    AVERAGE_ADULT_WPM,
 };
 use crate::permalink::Permalink;
 use crate::SiteConfig;
@@ -125,7 +124,7 @@ impl Section {
         let file = FileInfo::new(root_path, filepath);
         let path = SectionPath::from_file_path(root_path, &file.path).unwrap();
 
-        let reading_metrics = ReadingMetrics::for_content(&content, AVERAGE_ADULT_WPM);
+        let reading_metrics = ReadingMetrics::for_content(&content, config.reading_speed);
 
         Ok(Self {
             meta: front_matter,
