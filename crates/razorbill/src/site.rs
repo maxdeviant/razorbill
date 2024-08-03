@@ -32,6 +32,7 @@ use crate::content::{
     ContentAggregator, Page, Pages, ParsePageError, ParseSectionError, Section, SectionPath,
     Sections,
 };
+use crate::feed::render_feed;
 use crate::markdown::Shortcode;
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext, SectionToRender,
@@ -142,7 +143,7 @@ pub struct SiteConfig {
 }
 
 pub struct Site {
-    config: SiteConfig,
+    pub(crate) config: SiteConfig,
     root_path: PathBuf,
     content_path: PathBuf,
     /// The path to the `static` directory that houses static assets.
@@ -247,7 +248,9 @@ impl Site {
     }
 
     fn render_to(&mut self, storage: impl Store) -> Result<(), RenderSiteError> {
-        for section in self.sections.values() {
+        let mut rendered_sections = HashMap::new();
+
+        for (section_path, section) in self.sections.iter() {
             let section_template = if section.path == SectionPath("/_index".to_string()) {
                 &self.templates.index
             } else {
@@ -283,13 +286,12 @@ impl Site {
             link_replacer.visit(&mut rendered_section).unwrap();
 
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_section)?;
-
-            storage
-                .store_rendered_section(&section, rendered)
-                .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+            rendered_sections.insert(section_path.clone(), rendered);
         }
 
-        for page in self.pages.values() {
+        let mut rendered_pages = HashMap::new();
+
+        for (page_path, page) in self.pages.iter() {
             let template_name = page
                 .meta
                 .template
@@ -319,6 +321,21 @@ impl Site {
             link_replacer.visit(&mut rendered_page).unwrap();
 
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_page)?;
+            rendered_pages.insert(page_path.clone(), rendered);
+        }
+
+        for (section_path, rendered) in rendered_sections {
+            let section = self.sections.get_mut(&section_path).unwrap();
+            section.content = rendered.clone();
+
+            storage
+                .store_rendered_section(&section, rendered)
+                .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+        }
+
+        for (page_path, rendered) in rendered_pages {
+            let page = self.pages.get_mut(&page_path).unwrap();
+            page.content = rendered.clone();
 
             storage
                 .store_rendered_page(&page, rendered)
@@ -326,6 +343,7 @@ impl Site {
         }
 
         render_sitemap(&self, &storage);
+        render_feed(&self, self.pages.values().collect(), &storage);
 
         if let Some(sass_path) = self.sass_path.as_ref() {
             fn is_sass(entry: &walkdir::DirEntry) -> bool {

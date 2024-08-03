@@ -149,6 +149,7 @@ mod tests {
             path,
             file,
             raw_content: String::new(),
+            content: String::new(),
             word_count: WordCount(0),
             read_time: ReadTime(0),
             pages: Vec::new(),
@@ -175,6 +176,7 @@ mod tests {
             ancestors: Vec::new(),
             slug: String::new(),
             raw_content: String::new(),
+            content: String::new(),
             word_count: WordCount(0),
             read_time: ReadTime(0),
         }

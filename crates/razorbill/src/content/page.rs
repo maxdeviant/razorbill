@@ -20,6 +20,7 @@ pub struct Page {
     pub ancestors: Vec<PathBuf>,
     pub slug: String,
     pub raw_content: String,
+    pub content: String,
     pub word_count: WordCount,
     pub read_time: ReadTime,
 }
@@ -124,6 +125,7 @@ impl Page {
             ancestors: Vec::new(),
             slug,
             raw_content: content.to_string(),
+            content: String::new(),
             word_count: reading_metrics.word_count,
             read_time: reading_metrics.read_time,
         })
