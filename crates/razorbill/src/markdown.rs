@@ -446,7 +446,7 @@ where
                 }
                 Event::Html(html) => self.write_raw_html(&html),
                 Event::SoftBreak => {
-                    // TODO: Do we need to do anything here?
+                    self.write_raw_html(" ");
                 }
                 Event::HardBreak => self.write(self.components.br()),
                 Event::Rule => self.write(self.components.hr()),
