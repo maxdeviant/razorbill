@@ -374,7 +374,12 @@ impl Site {
         }
 
         render_sitemap(&self, &storage);
-        render_feed(&self, self.pages.values().collect(), &storage);
+        render_feed(
+            &self,
+            Permalink::from_path(&self.config, "atom.xml"),
+            self.pages.values().collect(),
+            &storage,
+        );
         self.render_taxonomies(&storage)?;
 
         if let Some(sass_path) = self.sass_path.as_ref() {
@@ -529,6 +534,10 @@ impl Site {
                 let pages = pages
                     .iter()
                     .map(|page| self.pages.get(page).unwrap())
+                    .collect::<Vec<_>>();
+                let pages_to_render = pages
+                    .iter()
+                    .copied()
                     .map(PageToRender::from_page)
                     .collect::<Vec<_>>();
 
@@ -544,7 +553,7 @@ impl Site {
                     term: TaxonomyTermToRender {
                         name: term.as_str(),
                         permalink: permalink.as_str(),
-                        pages,
+                        pages: pages_to_render,
                     },
                 };
 
@@ -556,6 +565,13 @@ impl Site {
                         HtmlElementRenderer::new().render_to_string(&rendered_term_page)?,
                     )
                     .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+
+                render_feed(
+                    &self,
+                    Permalink::from_path(&self.config, &format!("{taxonomy}/{term}/atom.xml")),
+                    pages,
+                    storage,
+                );
             }
         }
 

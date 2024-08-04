@@ -12,7 +12,11 @@ impl Permalink {
         // HACK: We probably need to deal with this elsewhere.
         let path = path.trim_end_matches("_index");
 
-        let suffix = if path.ends_with('/') || path.is_empty() {
+        let has_extension = path
+            .rsplit('/')
+            .next()
+            .map_or(false, |component| component.contains('.'));
+        let suffix = if path.ends_with('/') || path.is_empty() || has_extension {
             ""
         } else {
             "/"
@@ -62,6 +66,14 @@ mod tests {
         assert_eq!(
             Permalink::from_path(&make_config("https://example.com"), ""),
             Permalink("https://example.com/".parse().unwrap())
+        );
+        assert_eq!(
+            Permalink::from_path(&make_config("https://example.com"), "/atom.xml"),
+            Permalink("https://example.com/atom.xml".parse().unwrap())
+        );
+        assert_eq!(
+            Permalink::from_path(&make_config("https://example.com"), "atom.xml"),
+            Permalink("https://example.com/atom.xml".parse().unwrap())
         );
     }
 

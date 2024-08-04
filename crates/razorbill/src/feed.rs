@@ -1,15 +1,15 @@
 use std::fmt::Write;
-use std::path::PathBuf;
 
 use auk::renderer::HtmlElementRenderer;
 use auk::visitor::Visitor;
 use auk::*;
 
 use crate::content::Page;
+use crate::permalink::Permalink;
 use crate::storage::Store;
 use crate::{Site, SiteConfig};
 
-pub fn render_feed(site: &Site, pages: Vec<&Page>, storage: &impl Store) {
+pub fn render_feed(site: &Site, permalink: Permalink, pages: Vec<&Page>, storage: &impl Store) {
     let mut pages = pages
         .into_iter()
         .filter(|page| page.meta.date.is_some())
@@ -23,21 +23,21 @@ pub fn render_feed(site: &Site, pages: Vec<&Page>, storage: &impl Store) {
     });
 
     let rendered = XmlRenderer::new()
-        .render_to_string(&atom_feed_template(&site.config, pages))
+        .render_to_string(&atom_feed_template(&site.config, &permalink, pages))
         .unwrap();
 
     const XML_PROLOG: &str = r#"<?xml version="1.0" encoding="UTF-8"?>"#;
 
     let sitemap_xml = format!("{XML_PROLOG}\n{rendered}");
 
-    storage
-        .store_static_file(&PathBuf::from("atom.xml"), sitemap_xml)
-        .unwrap();
+    storage.store_content(permalink, sitemap_xml).unwrap();
 }
 
-pub fn atom_feed_template(config: &SiteConfig, pages: Vec<&Page>) -> HtmlElement {
-    let feed_url = format!("{}/atom.xml", config.base_url);
-
+pub fn atom_feed_template(
+    config: &SiteConfig,
+    feed_url: &Permalink,
+    pages: Vec<&Page>,
+) -> HtmlElement {
     feed()
         .attr("xmlns", "http://www.w3.org/2005/Atom")
         .attr("xml:lang", "en")
@@ -46,7 +46,7 @@ pub fn atom_feed_template(config: &SiteConfig, pages: Vec<&Page>) -> HtmlElement
             link()
                 .rel("self")
                 .attr("type", "application/atom+xml")
-                .href(&feed_url),
+                .href(feed_url.as_str()),
         )
         .child(
             generator()
@@ -54,7 +54,7 @@ pub fn atom_feed_template(config: &SiteConfig, pages: Vec<&Page>) -> HtmlElement
                 .child("Razorbill"),
         )
         .child(updated().child("Never"))
-        .child(id().child(feed_url))
+        .child(id().child(feed_url.as_str()))
         .children(pages.into_iter().map(|page| {
             let mut html_renderer = HtmlElementRenderer::new();
             html_renderer.visit_children(&page.content).unwrap();

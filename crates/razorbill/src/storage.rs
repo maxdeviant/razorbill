@@ -44,16 +44,15 @@ impl Store for DiskStorage {
     type Error = io::Error;
 
     fn store_content(&self, permalink: Permalink, content: String) -> Result<(), Self::Error> {
-        let output_dir = self
+        let output_path = self
             .output_path
             .join(PathBuf::from_str(permalink.path().trim_start_matches("/")).unwrap());
 
-        fs::create_dir_all(&output_dir)?;
-
         let output_path = if permalink.path().ends_with('/') {
-            output_dir.join("index.html")
+            fs::create_dir_all(&output_path)?;
+            output_path.join("index.html")
         } else {
-            output_dir
+            output_path
         };
 
         let mut output_file = File::create(&output_path)?;
