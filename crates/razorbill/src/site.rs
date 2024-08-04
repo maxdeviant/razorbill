@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use std::{io, thread};
+use std::{fs, io, thread};
 
 use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
@@ -496,6 +496,8 @@ impl Site {
             }
         }
 
+        self.copy_static_directory().unwrap();
+
         Ok(())
     }
 
@@ -700,6 +702,29 @@ impl Site {
                     pages,
                     storage,
                 );
+            }
+        }
+
+        Ok(())
+    }
+
+    fn copy_static_directory(&self) -> Result<()> {
+        let source = self.static_path.clone();
+
+        let walker = WalkDir::new(&source).follow_links(true).into_iter();
+
+        for entry in walker {
+            let entry = entry?;
+
+            let relative_path = entry.path().strip_prefix(&source).unwrap();
+            let destination_path = self.output_path.join(relative_path);
+
+            if entry.path().is_dir() {
+                if !destination_path.exists() {
+                    fs::create_dir_all(&destination_path)?;
+                }
+            } else {
+                fs::copy(entry.path(), &destination_path)?;
             }
         }
 
