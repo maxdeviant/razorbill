@@ -36,6 +36,20 @@ pub fn render_sitemap(site: &Site, storage: &impl Store) {
         });
     }
 
+    for (taxonomy, terms_by_page) in &site.taxonomies {
+        entries.insert(SitemapEntry {
+            permalink: Permalink::from_path(&site.config, taxonomy.as_str()),
+            updated_at: None,
+        });
+
+        for (term, _pages) in terms_by_page {
+            entries.insert(SitemapEntry {
+                permalink: Permalink::from_path(&site.config, &format!("{taxonomy}/{term}")),
+                updated_at: None,
+            });
+        }
+    }
+
     let mut entries = entries.into_iter().collect::<Vec<_>>();
     entries.sort();
 

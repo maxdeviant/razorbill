@@ -172,7 +172,7 @@ pub struct Site {
     shortcodes: HashMap<String, Shortcode>,
     pub(crate) sections: Sections,
     pub(crate) pages: Pages,
-    taxonomies: HashMap<String, HashMap<String, Vec<PathBuf>>>,
+    pub(crate) taxonomies: HashMap<String, HashMap<String, Vec<PathBuf>>>,
     is_serving: bool,
 }
 
