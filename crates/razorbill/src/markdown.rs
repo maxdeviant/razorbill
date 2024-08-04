@@ -377,6 +377,12 @@ fn escape_html(text: &str) -> String {
     escaped_text
 }
 
+fn escape_html_extended(text: &str) -> String {
+    escape_html(text)
+        .replace('\'', "&#x27;")
+        .replace('/', "&#x2F;")
+}
+
 fn escape_href(href: &str) -> String {
     let mut escaped_href = String::with_capacity(href.len());
     md::escape::escape_href(&mut escaped_href, &href).unwrap();
@@ -424,8 +430,20 @@ where
                     self.end_tag(tag);
                 }
                 Event::Text(text) => {
+                    let inside_pre = self
+                        .current_element_stack
+                        .iter()
+                        .rfind(|element| element.tag_name == "pre")
+                        .is_some();
+
                     if let Some(element) = self.current_element_stack.iter_mut().last() {
-                        element.extend([escape_html(&text).into()]);
+                        let text = if inside_pre {
+                            escape_html_extended(&text)
+                        } else {
+                            escape_html(&text)
+                        };
+
+                        element.extend([text.into()]);
                     }
 
                     // Add alt text to `img`s.
