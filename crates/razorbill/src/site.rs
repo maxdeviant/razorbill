@@ -176,6 +176,43 @@ impl<'a> MutVisitor for LinkReplacer<'a> {
     }
 }
 
+struct LiveReloadInjector {
+    port: u16,
+}
+
+impl LiveReloadInjector {
+    pub fn inject(live_reload_port: Option<u16>, element: &mut HtmlElement) {
+        let Some(port) = live_reload_port else {
+            return;
+        };
+
+        let mut injector = Self::new(port);
+        injector.visit(element).unwrap();
+    }
+
+    pub fn new(port: u16) -> Self {
+        Self { port }
+    }
+}
+
+impl MutVisitor for LiveReloadInjector {
+    type Error = ();
+
+    fn visit(&mut self, element: &mut HtmlElement) -> Result<(), Self::Error> {
+        use auk::*;
+
+        noop_visit_element(self, element)?;
+
+        if element.tag_name == "body" {
+            element.children.extend([script()
+                .src(format!("/livereload.js?port={}&amp;mindelay=10", self.port))
+                .into()])
+        }
+
+        Ok(())
+    }
+}
+
 struct BuildSiteParams {
     base_url: String,
     title: Option<String>,
@@ -212,6 +249,7 @@ pub struct Site {
     pub(crate) pages: Pages,
     pub(crate) taxonomies: HashMap<String, HashMap<String, Vec<PathBuf>>>,
     is_serving: bool,
+    live_reload_port: Option<u16>,
 }
 
 impl Site {
@@ -241,6 +279,7 @@ impl Site {
             pages: Pages::default(),
             taxonomies: HashMap::new(),
             is_serving: false,
+            live_reload_port: None,
         }
     }
 
@@ -401,6 +440,8 @@ impl Site {
             let mut link_replacer = LinkReplacer::new(&self, &section.permalink);
             link_replacer.visit(&mut rendered_section).unwrap();
 
+            LiveReloadInjector::inject(self.live_reload_port, &mut rendered_section);
+
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_section)?;
 
             storage
@@ -438,6 +479,8 @@ impl Site {
 
             let mut link_replacer = LinkReplacer::new(&self, &page.permalink);
             link_replacer.visit(&mut rendered_page).unwrap();
+
+            LiveReloadInjector::inject(self.live_reload_port, &mut rendered_page);
 
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_page)?;
 
@@ -562,7 +605,8 @@ impl Site {
             pages: &self.pages,
         };
 
-        let rendered_page = page_template(&ctx);
+        let mut rendered_page = page_template(&ctx);
+        LiveReloadInjector::inject(self.live_reload_port, &mut rendered_page);
         let rendered = HtmlElementRenderer::new().render_to_string(&rendered_page)?;
 
         storage
@@ -768,7 +812,9 @@ impl Site {
         .unwrap();
 
         let live_reload_broadcaster = live_reload_server.broadcaster();
-        let live_reload_address = SocketAddr::from(([127, 0, 0, 1], 35729));
+        let live_reload_port = 35729;
+        let live_reload_address = SocketAddr::from(([127, 0, 0, 1], live_reload_port));
+        self.live_reload_port = Some(live_reload_port);
 
         let live_reload_server = live_reload_server
             .bind(&live_reload_address)
