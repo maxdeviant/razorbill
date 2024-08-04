@@ -453,6 +453,7 @@ impl Site {
             self.pages.values().collect(),
             &storage,
         );
+        self.render_robots_txt(&storage)?;
         self.render_taxonomies(&storage)?;
 
         if let Some(sass_path) = self.sass_path.as_ref() {
@@ -535,6 +536,27 @@ impl Site {
         storage
             .store_content(Permalink::from_path(&self.config, alias), alias_html)
             .unwrap();
+    }
+
+    fn render_robots_txt(&self, storage: &impl Store) -> Result<(), RenderSiteError> {
+        let sitemap_url = Permalink::from_path(&self.config, "sitemap.xml");
+
+        let lines = vec![
+            "User-agent: *".to_string(),
+            "Disallow:".to_string(),
+            "Allow: /".to_string(),
+            format!("Sitemap: {}", sitemap_url.as_str()),
+            String::new(),
+        ];
+
+        storage
+            .store_content(
+                Permalink::from_path(&self.config, "robots.txt"),
+                lines.join("\n"),
+            )
+            .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+
+        Ok(())
     }
 
     fn render_taxonomies(&self, storage: &impl Store) -> Result<(), RenderSiteError> {
