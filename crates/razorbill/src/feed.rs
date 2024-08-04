@@ -58,6 +58,12 @@ pub fn atom_feed_template(
                 .href(feed_url.as_str()),
         )
         .child(
+            link()
+                .rel("alternate")
+                .attr("type", "text/html")
+                .href(&config.base_url),
+        )
+        .child(
             generator()
                 .attr("uri", "https://github.com/maxdeviant/razorbill")
                 .child("Razorbill"),
