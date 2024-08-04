@@ -2,4 +2,4 @@
 source: crates/razorbill/src/markdown/shortcodes.rs
 expression: "parse_and_render_markdown_with_shortcodes(text, shortcodes)"
 ---
-"<p>hey hohoho yoyoyoyoyo</p><p>Check out this video:</p><p><div><iframe src=\"https://youtube.com/embed/8o3i10OuMFQ\"></iframe></div></p><p><div><iframe src=\"https://youtube.com/embed/8o3i10OuMFQ?autoplay=1\"></iframe></div></p><p>Did you watch <div class=\"youtube\"><iframe src=\"https://youtube.com/embed/8o3i10OuMFQ?autoplay=1\"></iframe></div> yet?</p>"
+"<p>hey\nhohoho\nyoyoyoyoyo</p><p>Check out this video:</p><p><div><iframe src=\"https://youtube.com/embed/8o3i10OuMFQ\"></iframe></div></p><p><div><iframe src=\"https://youtube.com/embed/8o3i10OuMFQ?autoplay=1\"></iframe></div></p><p>Did you watch <div class=\"youtube\"><iframe src=\"https://youtube.com/embed/8o3i10OuMFQ?autoplay=1\"></iframe></div> yet?</p>"
