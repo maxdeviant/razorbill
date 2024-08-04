@@ -10,7 +10,13 @@ use crate::permalink::Permalink;
 use crate::storage::Store;
 use crate::{Site, SiteConfig};
 
-pub fn render_feed(site: &Site, permalink: Permalink, pages: Vec<&Page>, storage: &impl Store) {
+pub fn render_feed(
+    site: &Site,
+    permalink: Permalink,
+    title_suffix: Option<&str>,
+    pages: Vec<&Page>,
+    storage: &impl Store,
+) {
     let mut pages = pages
         .into_iter()
         .filter(|page| page.meta.date.is_some())
@@ -24,7 +30,12 @@ pub fn render_feed(site: &Site, permalink: Permalink, pages: Vec<&Page>, storage
     });
 
     let rendered = XmlRenderer::new()
-        .render_to_string(&atom_feed_template(&site.config, &permalink, pages))
+        .render_to_string(&atom_feed_template(
+            &site.config,
+            &permalink,
+            title_suffix,
+            pages,
+        ))
         .unwrap();
 
     const XML_PROLOG: &str = r#"<?xml version="1.0" encoding="UTF-8"?>"#;
@@ -37,6 +48,7 @@ pub fn render_feed(site: &Site, permalink: Permalink, pages: Vec<&Page>, storage
 pub fn atom_feed_template(
     config: &SiteConfig,
     feed_url: &Permalink,
+    title_suffix: Option<&str>,
     pages: Vec<&Page>,
 ) -> HtmlElement {
     let last_updated_at = pages
@@ -49,7 +61,11 @@ pub fn atom_feed_template(
     feed()
         .attr("xmlns", "http://www.w3.org/2005/Atom")
         .attr("xml:lang", "en")
-        .child(title().child(config.title.clone().unwrap_or_default()))
+        .child(
+            title()
+                .child(config.title.clone().unwrap_or_default())
+                .children(title_suffix.map(|suffix| format!(" - {suffix}"))),
+        )
         .child(
             link()
                 .rel("self")

@@ -412,6 +412,7 @@ impl Site {
         render_feed(
             &self,
             Permalink::from_path(&self.config, "atom.xml"),
+            None,
             self.pages.values().collect(),
             &storage,
         );
@@ -604,6 +605,7 @@ impl Site {
                 render_feed(
                     &self,
                     Permalink::from_path(&self.config, &format!("{taxonomy}/{term}/atom.xml")),
+                    Some(term),
                     pages,
                     storage,
                 );
