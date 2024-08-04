@@ -3,8 +3,10 @@ use std::fmt::Write;
 use auk::renderer::HtmlElementRenderer;
 use auk::visitor::Visitor;
 use auk::*;
+use chrono_tz::Tz;
 
 use crate::content::Page;
+use crate::date::format_date;
 use crate::permalink::Permalink;
 use crate::storage::Store;
 use crate::{Site, SiteConfig};
@@ -38,6 +40,13 @@ pub fn atom_feed_template(
     feed_url: &Permalink,
     pages: Vec<&Page>,
 ) -> HtmlElement {
+    let last_updated_at = pages
+        .iter()
+        .filter_map(|page| page.meta.updated.as_ref())
+        .chain(pages[0].meta.date.as_ref())
+        .max()
+        .unwrap();
+
     feed()
         .attr("xmlns", "http://www.w3.org/2005/Atom")
         .attr("xml:lang", "en")
@@ -53,9 +62,12 @@ pub fn atom_feed_template(
                 .attr("uri", "https://github.com/maxdeviant/razorbill")
                 .child("Razorbill"),
         )
-        .child(updated().child("Never"))
+        .child(updated().child(format_date(last_updated_at, "%+", Tz::UTC)))
         .child(id().child(feed_url.as_str()))
         .children(pages.into_iter().map(|page| {
+            let date = page.meta.date.clone().unwrap();
+            let updated_at = page.meta.updated.clone().unwrap_or(date.clone());
+
             let mut html_renderer = HtmlElementRenderer::new();
             html_renderer.visit_children(&page.content).unwrap();
             let content_html = html_renderer.html();
@@ -63,8 +75,8 @@ pub fn atom_feed_template(
             entry()
                 .attr("xml:lang", "en")
                 .child(title().child(page.meta.title.clone().unwrap_or_default()))
-                .child(published().child(page.meta.date.clone().unwrap_or_default()))
-                .child(updated().child(page.meta.updated.clone().unwrap_or_default()))
+                .child(published().child(format_date(&date, "%+", Tz::UTC)))
+                .child(updated().child(format_date(&updated_at, "%+", Tz::UTC)))
                 .child(author().child(name().child("Unknown")))
                 .child(
                     link()

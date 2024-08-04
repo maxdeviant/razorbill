@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 pub mod content;
+mod date;
 mod feed;
 pub mod markdown;
 mod permalink;
