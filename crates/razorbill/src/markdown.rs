@@ -285,6 +285,7 @@ pub struct Heading {
 
 struct HeadingIdentifier {
     headings: Vec<Heading>,
+    heading_id_counts: HashMap<String, usize>,
     inside_header: bool,
     title: Option<String>,
 }
@@ -293,6 +294,7 @@ impl HeadingIdentifier {
     fn new() -> Self {
         Self {
             headings: Vec::new(),
+            heading_id_counts: HashMap::new(),
             inside_header: false,
             title: None,
         }
@@ -310,10 +312,18 @@ impl MutVisitor for HeadingIdentifier {
                 noop_visit_element(self, element)?;
 
                 if let Some(title) = self.title.take() {
-                    let slug = slugify(&title);
+                    let mut id = slugify(&title);
+
+                    let id_count = self.heading_id_counts.entry(id.clone()).or_insert(0);
+                    if *id_count > 0 {
+                        id.push_str("-");
+                        id.push_str(&id_count.to_string());
+                    }
+
+                    *id_count += 1;
 
                     if element.attrs.get("id").is_none() {
-                        element.attrs.insert("id".to_string(), slug.clone());
+                        element.attrs.insert("id".to_string(), id.clone());
                     }
 
                     self.headings.push(Heading {
@@ -325,7 +335,7 @@ impl MutVisitor for HeadingIdentifier {
                             "h6" => 6,
                             _ => unreachable!(),
                         },
-                        id: slug,
+                        id,
                         title,
                         children: Vec::new(),
                     });
