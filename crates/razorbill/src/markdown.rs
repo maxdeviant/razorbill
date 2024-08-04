@@ -535,16 +535,25 @@ where
             Tag::BlockQuote => self.push(self.components.blockquote()),
             Tag::CodeBlock(kind) => match kind {
                 CodeBlockKind::Fenced(info) => {
-                    self.push(self.components.pre());
-
                     let language = info.split(' ').next().unwrap();
                     if language.is_empty() {
+                        self.push(self.components.pre());
                         self.push(self.components.code());
                     } else {
+                        let language = escape_html(language);
+                        let language_class = format!("language-{language}");
+
+                        self.push(
+                            self.components
+                                .pre()
+                                .attr("data-lang", &language)
+                                .class(&language_class),
+                        );
                         self.push(
                             self.components
                                 .code()
-                                .class(format!("language-{}", escape_html(language))),
+                                .class(language_class)
+                                .attr("data-lang", language),
                         );
                     }
                 }
