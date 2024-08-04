@@ -8,7 +8,7 @@ use std::{io, thread};
 
 use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
-use auk::visitor::{MutVisitor, Visitor};
+use auk::visitor::{noop_visit_element, MutVisitor, Visitor};
 use auk::HtmlElement;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
@@ -104,33 +104,70 @@ static SITE_CONTENT: Lazy<Arc<RwLock<HashMap<String, String>>>> =
 
 struct LinkReplacer<'a> {
     site: &'a Site,
+    current_url: &'a Permalink,
+    inside_footnote_reference: bool,
+}
+
+impl<'a> LinkReplacer<'a> {
+    pub fn new(site: &'a Site, current_url: &'a Permalink) -> Self {
+        Self {
+            site,
+            current_url,
+            inside_footnote_reference: false,
+        }
+    }
 }
 
 impl<'a> MutVisitor for LinkReplacer<'a> {
     type Error = ();
 
+    fn visit(&mut self, element: &mut HtmlElement) -> Result<(), Self::Error> {
+        if let Some(class) = element.attrs.get("class") {
+            if class.contains("footnote-reference") {
+                self.inside_footnote_reference = true;
+            }
+        }
+
+        noop_visit_element(self, element)?;
+
+        self.inside_footnote_reference = false;
+
+        Ok(())
+    }
+
     fn visit_attr(&mut self, name: &str, value: &mut String) -> Result<(), Self::Error> {
-        if name == "href" && value.starts_with("@/") {
-            let path = self.site.content_path.join(value.replacen("@/", "", 1));
+        if name == "href" {
+            if value.starts_with("@/") {
+                let path = self.site.content_path.join(value.replacen("@/", "", 1));
 
-            let permalink = None
-                .or_else(|| {
-                    self.site
-                        .pages
-                        .get(&path)
-                        .map(|page| page.permalink.clone())
-                })
-                .or_else(|| {
-                    self.site
-                        .sections
-                        .get(&path)
-                        .map(|section| section.permalink.clone())
-                });
+                let permalink = None
+                    .or_else(|| {
+                        self.site
+                            .pages
+                            .get(&path)
+                            .map(|page| page.permalink.clone())
+                    })
+                    .or_else(|| {
+                        self.site
+                            .sections
+                            .get(&path)
+                            .map(|section| section.permalink.clone())
+                    });
 
-            if let Some(permalink) = permalink {
-                *value = permalink.as_str().to_owned();
-            } else {
-                eprintln!("Invalid link: {value}");
+                if let Some(permalink) = permalink {
+                    *value = permalink.as_str().to_owned();
+                } else {
+                    eprintln!("Invalid link: {value}");
+                }
+
+                return Ok(());
+            }
+
+            if value.starts_with('#') && !self.inside_footnote_reference {
+                *value = format!(
+                    "{current_url}{value}",
+                    current_url = self.current_url.as_str()
+                )
             }
         }
 
@@ -293,7 +330,7 @@ impl Site {
                 &self.shortcodes,
             );
 
-            let mut link_replacer = LinkReplacer { site: &self };
+            let mut link_replacer = LinkReplacer::new(&self, &section.permalink);
             link_replacer.visit_children(&mut content).unwrap();
 
             sections_to_update.insert(section_path.clone(), (content, table_of_contents));
@@ -314,7 +351,7 @@ impl Site {
                 &self.shortcodes,
             );
 
-            let mut link_replacer = LinkReplacer { site: &self };
+            let mut link_replacer = LinkReplacer::new(&self, &page.permalink);
             link_replacer.visit_children(&mut content).unwrap();
 
             pages_to_update.insert(page_path.clone(), (content, table_of_contents));
@@ -360,7 +397,7 @@ impl Site {
 
             let mut rendered_section = section_template(&ctx);
 
-            let mut link_replacer = LinkReplacer { site: &self };
+            let mut link_replacer = LinkReplacer::new(&self, &section.permalink);
             link_replacer.visit(&mut rendered_section).unwrap();
 
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_section)?;
@@ -398,7 +435,7 @@ impl Site {
 
             let mut rendered_page = page_template(&ctx);
 
-            let mut link_replacer = LinkReplacer { site: &self };
+            let mut link_replacer = LinkReplacer::new(&self, &page.permalink);
             link_replacer.visit(&mut rendered_page).unwrap();
 
             let rendered = HtmlElementRenderer::new().render_to_string(&rendered_page)?;
