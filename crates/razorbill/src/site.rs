@@ -64,6 +64,7 @@ struct Templates {
     pub page: HashMap<TemplateKey, RenderPage>,
     pub taxonomy: HashMap<String, RenderTaxonomy>,
     pub taxonomy_term: HashMap<String, RenderTaxonomyTerm>,
+    pub not_found: Option<Arc<dyn Fn(&BaseRenderContext) -> HtmlElement + Send + Sync>>,
 }
 
 #[derive(Error, Debug)]
@@ -453,6 +454,7 @@ impl Site {
             self.pages.values().collect(),
             &storage,
         );
+        self.render_404_page(&storage)?;
         self.render_robots_txt(&storage)?;
         self.render_taxonomies(&storage)?;
 
@@ -536,6 +538,36 @@ impl Site {
         storage
             .store_content(Permalink::from_path(&self.config, alias), alias_html)
             .unwrap();
+    }
+
+    fn render_404_page(&self, storage: &impl Store) -> Result<(), RenderSiteError> {
+        let page_template = self.templates.not_found.clone().unwrap_or_else(|| {
+            Arc::new(|_ctx| {
+                use auk::*;
+
+                html()
+                    .child(head().child(title().child("404: Page Not Found")))
+                    .child(body().child(h1().child("404: Page Not Found")))
+            })
+        });
+
+        let ctx = BaseRenderContext {
+            base_url: self.base_url(),
+            content_path: &self.content_path,
+            markdown_components: &self.markdown_components,
+            shortcodes: &self.shortcodes,
+            sections: &self.sections,
+            pages: &self.pages,
+        };
+
+        let rendered_page = page_template(&ctx);
+        let rendered = HtmlElementRenderer::new().render_to_string(&rendered_page)?;
+
+        storage
+            .store_content(Permalink::from_path(&self.config, "404.html"), rendered)
+            .map_err(|err| RenderSiteError::Storage(err.to_string()))?;
+
+        Ok(())
     }
 
     fn render_robots_txt(&self, storage: &impl Store) -> Result<(), RenderSiteError> {
@@ -952,6 +984,7 @@ impl SiteBuilder<()> {
                 page: HashMap::new(),
                 taxonomy: HashMap::new(),
                 taxonomy_term: HashMap::new(),
+                not_found: None,
             },
             markdown_components: MarkdownComponents::default(),
             shortcodes: HashMap::new(),
@@ -1003,6 +1036,7 @@ impl SiteBuilder<WithBaseUrl> {
                 page: HashMap::from_iter([(TemplateKey::Default, Arc::new(page) as RenderPage)]),
                 taxonomy: HashMap::new(),
                 taxonomy_term: HashMap::new(),
+                not_found: None,
             },
             ..self.coerce()
         }
@@ -1031,6 +1065,14 @@ impl SiteBuilder<WithTemplates> {
         self.templates
             .page
             .insert(TemplateKey::Custom(name.into()), Arc::new(template));
+        self
+    }
+
+    pub fn add_404_template(
+        mut self,
+        template: impl Fn(&BaseRenderContext) -> HtmlElement + Send + Sync + 'static,
+    ) -> Self {
+        self.templates.not_found = Some(Arc::new(template));
         self
     }
 
