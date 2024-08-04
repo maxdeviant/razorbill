@@ -8,7 +8,7 @@ use std::{io, thread};
 
 use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
-use auk::visitor::MutVisitor;
+use auk::visitor::{MutVisitor, Visitor};
 use auk::HtmlElement;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
@@ -448,26 +448,26 @@ impl Site {
         use auk::*;
 
         let url = permalink.as_str();
-        let alias_template = html()
-            .child(meta().charset("utf-8"))
-            .child(link().rel("canonical").href(url))
-            .child(
-                meta()
-                    .http_equiv("refresh")
-                    .content(format!("0; url={url}")),
-            )
-            .child(title().child("Redirect"))
-            .child(
-                p().child(a().href(url).child("Click here"))
-                    .child(" to be redirected."),
-            );
+        let alias_template = vec![
+            meta().charset("utf-8").into(),
+            link().rel("canonical").href(url).into(),
+            meta()
+                .http_equiv("refresh")
+                .content(format!("0; url={url}"))
+                .into(),
+            title().child("Redirect").into(),
+            p().child(a().href(url).child("Click here"))
+                .child(" to be redirected.")
+                .into(),
+        ];
 
-        let html = HtmlElementRenderer::new()
-            .render_to_string(&alias_template)
-            .unwrap();
+        let mut html_renderer = HtmlElementRenderer::new();
+        html_renderer.visit_children(&alias_template).unwrap();
+        let mut alias_html = "<!DOCTYPE html>".to_string();
+        alias_html.push_str(html_renderer.html());
 
         storage
-            .store_content(Permalink::from_path(&self.config, alias), html)
+            .store_content(Permalink::from_path(&self.config, alias), alias_html)
             .unwrap();
     }
 
