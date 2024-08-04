@@ -1,6 +1,5 @@
 use std::fmt::Write;
 
-use auk::renderer::HtmlElementRenderer;
 use auk::visitor::Visitor;
 use auk::*;
 use chrono_tz::Tz;
@@ -74,9 +73,11 @@ pub fn atom_feed_template(
             let date = page.meta.date.clone().unwrap();
             let updated_at = page.meta.updated.clone().unwrap_or(date.clone());
 
-            let mut html_renderer = HtmlElementRenderer::new();
+            // We're rendering the HTML with the `XmlRenderer` primarily so that
+            // void elements (e.g., `img`, `hr`) get self-closing tags.
+            let mut html_renderer = XmlRenderer::new();
             html_renderer.visit_children(&page.content).unwrap();
-            let content_html = html_renderer.html();
+            let content_html = html_renderer.xml;
 
             entry()
                 .attr("xml:lang", "en")
@@ -95,7 +96,7 @@ pub fn atom_feed_template(
                     content()
                         .attr("type", "html")
                         .attr("xml:base", page.permalink.as_str())
-                        .child(escape_xml(content_html)),
+                        .child(escape_xml(&content_html)),
                 )
         }))
 }
@@ -156,22 +157,20 @@ fn is_void(element: &HtmlElement) -> bool {
 
 /// A renderer for [`HtmlElement`]s to a string of XML.
 pub struct XmlRenderer {
-    html: String,
+    xml: String,
 }
 
 impl XmlRenderer {
     /// Returns a new [`XmlRenderer`].
     pub fn new() -> Self {
-        Self {
-            html: String::new(),
-        }
+        Self { xml: String::new() }
     }
 
     /// Renders the given [`HtmlElement`] to a string of XML.
     pub fn render_to_string(mut self, element: &HtmlElement) -> Result<String, std::fmt::Error> {
         self.visit(element)?;
 
-        Ok(self.html)
+        Ok(self.xml)
     }
 }
 
@@ -180,41 +179,41 @@ impl Visitor for XmlRenderer {
 
     fn visit(&mut self, element: &HtmlElement) -> Result<(), Self::Error> {
         if element.tag_name == "html" {
-            write!(&mut self.html, "<!DOCTYPE html>")?;
+            write!(&mut self.xml, "<!DOCTYPE html>")?;
         }
 
-        write!(&mut self.html, "<{}", element.tag_name)?;
+        write!(&mut self.xml, "<{}", element.tag_name)?;
 
         for (name, value) in &element.attrs {
             self.visit_attr(name, value)?;
         }
 
         if is_void(&element) {
-            write!(&mut self.html, "/>")?;
+            write!(&mut self.xml, "/>")?;
             return Ok(());
         } else {
-            write!(&mut self.html, ">")?;
+            write!(&mut self.xml, ">")?;
         }
 
         self.visit_children(&element.children)?;
 
-        write!(&mut self.html, "</{}>", element.tag_name)?;
+        write!(&mut self.xml, "</{}>", element.tag_name)?;
 
         Ok(())
     }
 
     fn visit_text(&mut self, text: &str) -> Result<(), Self::Error> {
-        write!(&mut self.html, "{}", text)?;
+        write!(&mut self.xml, "{}", text)?;
 
         Ok(())
     }
 
     fn visit_attr(&mut self, name: &str, value: &str) -> Result<(), Self::Error> {
-        write!(&mut self.html, " ")?;
-        write!(&mut self.html, "{name}")?;
+        write!(&mut self.xml, " ")?;
+        write!(&mut self.xml, "{name}")?;
 
         if !value.is_empty() {
-            write!(&mut self.html, r#"="{value}""#)?;
+            write!(&mut self.xml, r#"="{value}""#)?;
         }
 
         Ok(())
