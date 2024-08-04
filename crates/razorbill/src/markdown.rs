@@ -23,6 +23,7 @@ pub struct MarkdownComponents {
     pub h6: Box<dyn Fn() -> HtmlElement + Send + Sync>,
     pub table: Box<dyn Fn() -> HtmlElement + Send + Sync>,
     pub thead: Box<dyn Fn() -> HtmlElement + Send + Sync>,
+    pub tbody: Box<dyn Fn() -> HtmlElement + Send + Sync>,
     pub tr: Box<dyn Fn() -> HtmlElement + Send + Sync>,
     pub th: Box<dyn Fn() -> HtmlElement + Send + Sync>,
     pub td: Box<dyn Fn() -> HtmlElement + Send + Sync>,
@@ -91,6 +92,11 @@ impl MarkdownComponents {
     #[inline(always)]
     pub fn thead(&self) -> HtmlElement {
         (self.thead)()
+    }
+
+    #[inline(always)]
+    pub fn tbody(&self) -> HtmlElement {
+        (self.tbody)()
     }
 
     #[inline(always)]
@@ -194,6 +200,7 @@ impl Default for MarkdownComponents {
             h6: Box::new(h6),
             table: Box::new(table),
             thead: Box::new(thead),
+            tbody: Box::new(tbody),
             tr: Box::new(tr),
             th: Box::new(th),
             td: Box::new(td),
@@ -657,6 +664,7 @@ where
             Tag::TableHead => {
                 self.pop();
                 self.pop();
+                self.push(self.components.tbody());
 
                 self.table_state = TableState::Body;
             }
