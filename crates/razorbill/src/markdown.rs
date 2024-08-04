@@ -312,7 +312,12 @@ impl MutVisitor for HeadingIdentifier {
                 noop_visit_element(self, element)?;
 
                 if let Some(title) = self.title.take() {
-                    let mut id = slugify(&title);
+                    let mut id = slugify(
+                        title
+                            // HACK: Remove undesired remnants from escaping.
+                            // We should figure out how to avoid escaping in the first place.
+                            .replace("&quot;", ""),
+                    );
 
                     let id_count = self.heading_id_counts.entry(id.clone()).or_insert(0);
                     if *id_count > 0 {
