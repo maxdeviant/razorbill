@@ -66,6 +66,9 @@ pub struct SectionFrontMatter {
     pub transparent: bool,
 
     #[serde(default)]
+    pub draft: bool,
+
+    #[serde(default)]
     pub aliases: Vec<String>,
 
     #[serde(default)]

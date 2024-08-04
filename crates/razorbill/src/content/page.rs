@@ -64,6 +64,8 @@ pub struct PageFrontMatter {
     #[serde(default, deserialize_with = "from_toml_datetime")]
     pub updated: Option<String>,
     #[serde(default)]
+    pub draft: bool,
+    #[serde(default)]
     pub aliases: Vec<String>,
     pub template: Option<String>,
     #[serde(default)]

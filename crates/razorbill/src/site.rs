@@ -250,10 +250,18 @@ impl Site {
             ContentAggregator::new(self.content_path.clone(), self.config.taxonomies.clone());
 
         for section in sections {
+            if section.meta.draft {
+                continue;
+            }
+
             aggregator.add_section(section);
         }
 
         for page in pages {
+            if page.meta.draft {
+                continue;
+            }
+
             aggregator.add_page(page);
         }
 
