@@ -446,21 +446,12 @@ where
                         element.extend([text.into()]);
                     }
 
-                    // Add alt text to `img`s.
-                    if let Some(image) = self
-                        .current_element_stack
-                        .iter_mut()
-                        .rfind(|element| element.tag_name == "img")
-                    {
-                        image
-                            .attrs
-                            .entry("alt".to_string())
-                            .or_default()
-                            .push_str(&escape_html(&text));
-                    }
+                    self.write_img_alt_text(&text);
                 }
                 Event::Code(text) => {
-                    self.write(self.components.code().child(escape_html(&text)));
+                    if !self.write_img_alt_text(&text) {
+                        self.write(self.components.code().child(escape_html(&text)));
+                    }
                 }
                 Event::Html(html) => self.write_raw_html(&html),
                 Event::SoftBreak => {
@@ -692,6 +683,26 @@ where
             }
         }
     }
+
+    /// Writes the given text to the `alt` attribute of the deepest `img` tag.
+    ///
+    /// If there isn't an `img` tag on the element stack, will return `false`.
+    fn write_img_alt_text(&mut self, text: &str) -> bool {
+        let Some(image) = self
+            .current_element_stack
+            .iter_mut()
+            .rfind(|element| element.tag_name == "img")
+        else {
+            return false;
+        };
+
+        image
+            .attrs
+            .entry("alt".to_string())
+            .or_default()
+            .push_str(&escape_html(&text));
+        true
+    }
 }
 
 #[cfg(test)]
@@ -773,6 +784,8 @@ mod tests {
             Here's a picture of a less-than sign:
 
             ![A picture of a < sign](https://example.com/less-than.png)
+
+            ![A screenshot of `ls` output](https://example.com/ls-output.png)
         "};
 
         insta::assert_yaml_snapshot!(parse_and_render_markdown(text));
