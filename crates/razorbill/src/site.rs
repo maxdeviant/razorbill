@@ -284,24 +284,44 @@ impl Site {
     fn render_to(&mut self, storage: impl Store) -> Result<(), RenderSiteError> {
         self.render_aliases(&storage);
 
-        for section in self.sections.values_mut() {
-            let (content, table_of_contents) = markdown_with_shortcodes(
+        let mut sections_to_update = HashMap::new();
+
+        for (section_path, section) in self.sections.iter() {
+            let (mut content, table_of_contents) = markdown_with_shortcodes(
                 &section.raw_content,
                 &self.markdown_components,
                 &self.shortcodes,
             );
 
+            let mut link_replacer = LinkReplacer { site: &self };
+            link_replacer.visit_children(&mut content).unwrap();
+
+            sections_to_update.insert(section_path.clone(), (content, table_of_contents));
+        }
+
+        for (section_path, (content, table_of_contents)) in sections_to_update {
+            let section = self.sections.get_mut(&section_path).unwrap();
             section.content = content;
             section.table_of_contents = table_of_contents;
         }
 
-        for page in self.pages.values_mut() {
-            let (content, table_of_contents) = markdown_with_shortcodes(
+        let mut pages_to_update = HashMap::new();
+
+        for (page_path, page) in self.pages.iter() {
+            let (mut content, table_of_contents) = markdown_with_shortcodes(
                 &page.raw_content,
                 &self.markdown_components,
                 &self.shortcodes,
             );
 
+            let mut link_replacer = LinkReplacer { site: &self };
+            link_replacer.visit_children(&mut content).unwrap();
+
+            pages_to_update.insert(page_path.clone(), (content, table_of_contents));
+        }
+
+        for (page_path, (content, table_of_contents)) in pages_to_update {
+            let page = self.pages.get_mut(&page_path).unwrap();
             page.content = content;
             page.table_of_contents = table_of_contents;
         }
