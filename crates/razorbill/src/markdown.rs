@@ -461,7 +461,7 @@ where
                         ),
                     );
                 }
-                Event::TaskListMarker(checked) => todo!(),
+                Event::TaskListMarker(_checked) => todo!(),
             }
         }
 

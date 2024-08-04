@@ -160,6 +160,7 @@ pub struct SiteConfig {
 
 pub struct Site {
     pub(crate) config: SiteConfig,
+    #[allow(unused)]
     root_path: PathBuf,
     content_path: PathBuf,
     /// The path to the `static` directory that houses static assets.
