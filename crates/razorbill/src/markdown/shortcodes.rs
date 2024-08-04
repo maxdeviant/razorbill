@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 
 use crate::markdown::shortcodes::parser::parse_document;
-use crate::markdown::{markdown, MarkdownComponents};
+use crate::markdown::{markdown, MarkdownComponents, TableOfContents};
 
 const SHORTCODE_PLACEHOLDER: &str = "@@RAZORBILL_SHORTCODE@@";
 
@@ -49,12 +49,12 @@ pub fn markdown_with_shortcodes(
     input: &str,
     components: &MarkdownComponents,
     shortcodes: &HashMap<String, Shortcode>,
-) -> Vec<Element> {
+) -> (Vec<Element>, TableOfContents) {
     let (output, shortcode_calls) = parse_document(input).unwrap();
-    let elements = markdown(&output, components);
+    let (elements, table_of_contents) = markdown(&output, components);
     let elements = replace_shortcodes(elements, shortcodes, &mut shortcode_calls.into_iter());
 
-    elements
+    (elements, table_of_contents)
 }
 
 fn replace_shortcodes(
@@ -117,7 +117,8 @@ mod tests {
         text: &str,
         shortcodes: HashMap<String, Shortcode>,
     ) -> String {
-        let elements = markdown_with_shortcodes(text, &MarkdownComponents::default(), &shortcodes);
+        let (elements, _table_of_contents) =
+            markdown_with_shortcodes(text, &MarkdownComponents::default(), &shortcodes);
 
         elements
             .into_iter()

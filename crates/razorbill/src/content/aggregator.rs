@@ -167,6 +167,7 @@ mod tests {
         FileInfo, MaybeSortBy, PageFrontMatter, PagePath, ReadTime, SectionFrontMatter,
         SectionPath, SortBy, WordCount, AVERAGE_ADULT_WPM,
     };
+    use crate::markdown::TableOfContents;
     use crate::permalink::Permalink;
     use crate::SiteConfig;
 
@@ -194,6 +195,7 @@ mod tests {
             file,
             raw_content: String::new(),
             content: Vec::new(),
+            table_of_contents: TableOfContents::default(),
             word_count: WordCount(0),
             read_time: ReadTime(0),
             pages: Vec::new(),
@@ -224,6 +226,7 @@ mod tests {
             slug: String::new(),
             raw_content: String::new(),
             content: Vec::new(),
+            table_of_contents: TableOfContents::default(),
             word_count: WordCount(0),
             read_time: ReadTime(0),
         }

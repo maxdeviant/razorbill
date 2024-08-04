@@ -276,19 +276,25 @@ impl Site {
         self.render_aliases(&storage);
 
         for section in self.sections.values_mut() {
-            section.content = markdown_with_shortcodes(
+            let (content, table_of_contents) = markdown_with_shortcodes(
                 &section.raw_content,
                 &self.markdown_components,
                 &self.shortcodes,
             );
+
+            section.content = content;
+            section.table_of_contents = table_of_contents;
         }
 
         for page in self.pages.values_mut() {
-            page.content = markdown_with_shortcodes(
+            let (content, table_of_contents) = markdown_with_shortcodes(
                 &page.raw_content,
                 &self.markdown_components,
                 &self.shortcodes,
             );
+
+            page.content = content;
+            page.table_of_contents = table_of_contents;
         }
 
         for section in self.sections.values() {

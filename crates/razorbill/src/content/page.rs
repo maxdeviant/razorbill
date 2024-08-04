@@ -9,6 +9,7 @@ use thiserror::Error;
 use crate::content::{
     from_toml_datetime, parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount,
 };
+use crate::markdown::TableOfContents;
 use crate::permalink::Permalink;
 use crate::SiteConfig;
 
@@ -22,6 +23,7 @@ pub struct Page {
     pub slug: String,
     pub raw_content: String,
     pub content: Vec<Element>,
+    pub table_of_contents: TableOfContents,
     pub word_count: WordCount,
     pub read_time: ReadTime,
 }
@@ -131,6 +133,7 @@ impl Page {
             slug,
             raw_content: content.to_string(),
             content: Vec::new(),
+            table_of_contents: TableOfContents::default(),
             word_count: reading_metrics.word_count,
             read_time: reading_metrics.read_time,
         })

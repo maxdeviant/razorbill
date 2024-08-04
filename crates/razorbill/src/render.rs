@@ -6,7 +6,7 @@ use auk::Element;
 use serde::Deserialize;
 
 use crate::content::{Page, Pages, ReadTime, Section, Sections, WordCount};
-use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
+use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode, TableOfContents};
 
 pub struct BaseRenderContext<'a> {
     pub(crate) base_url: &'a str,
@@ -24,7 +24,9 @@ impl<'a> BaseRenderContext<'a> {
 
     /// Renders the provided Markdown text.
     pub fn render_markdown(&self, text: &str) -> Vec<Element> {
-        markdown_with_shortcodes(text, self.markdown_components, self.shortcodes)
+        let (markdown, _table_of_contents) =
+            markdown_with_shortcodes(text, self.markdown_components, self.shortcodes);
+        markdown
     }
 
     pub fn get_section(&self, path: impl AsRef<Path>) -> Option<SectionToRender<'a>> {
@@ -93,6 +95,7 @@ pub struct SectionToRender<'a> {
     pub permalink: &'a str,
     pub raw_content: &'a str,
     pub content: &'a Vec<Element>,
+    pub table_of_contents: &'a TableOfContents,
     pub word_count: WordCount,
     pub read_time: ReadTime,
     pub extra: &'a toml::Table,
@@ -114,6 +117,7 @@ impl<'a> SectionToRender<'a> {
             permalink: &section.permalink.as_str(),
             raw_content: &section.raw_content,
             content: &section.content,
+            table_of_contents: &section.table_of_contents,
             word_count: section.word_count,
             read_time: section.read_time,
             extra: &section.meta.extra,
@@ -151,6 +155,7 @@ pub struct PageToRender<'a> {
     pub updated: &'a Option<String>,
     pub raw_content: &'a str,
     pub content: &'a Vec<Element>,
+    pub table_of_contents: &'a TableOfContents,
     pub word_count: WordCount,
     pub read_time: ReadTime,
     pub taxonomies: &'a HashMap<String, Vec<String>>,
@@ -168,6 +173,7 @@ impl<'a> PageToRender<'a> {
             updated: &page.meta.updated,
             raw_content: &page.raw_content,
             content: &page.content,
+            table_of_contents: &page.table_of_contents,
             word_count: page.word_count,
             read_time: page.read_time,
             taxonomies: &page.meta.taxonomies,

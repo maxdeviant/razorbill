@@ -8,6 +8,7 @@ use thiserror::Error;
 use crate::content::{
     parse_front_matter, FileInfo, MaybeSortBy, ReadTime, ReadingMetrics, WordCount,
 };
+use crate::markdown::TableOfContents;
 use crate::permalink::Permalink;
 use crate::SiteConfig;
 
@@ -19,6 +20,7 @@ pub struct Section {
     pub permalink: Permalink,
     pub raw_content: String,
     pub content: Vec<Element>,
+    pub table_of_contents: TableOfContents,
     pub word_count: WordCount,
     pub read_time: ReadTime,
     pub pages: Vec<PathBuf>,
@@ -133,6 +135,7 @@ impl Section {
             path,
             raw_content: content.to_string(),
             content: Vec::new(),
+            table_of_contents: TableOfContents::default(),
             word_count: reading_metrics.word_count,
             read_time: reading_metrics.read_time,
             pages: Vec::new(),
