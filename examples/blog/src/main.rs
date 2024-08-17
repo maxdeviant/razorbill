@@ -115,7 +115,7 @@ fn base_page(props: BasePageProps) -> HtmlElement {
                         .name("viewport")
                         .content("width=device-width, initial-scale=1.0, maximum-scale=1"),
                 )
-                .child(title().child(text(props.title)))
+                .child(title().child(props.title))
                 .child(
                     link()
                         .rel("stylesheet")

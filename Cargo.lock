@@ -108,8 +108,9 @@ checksum = "ca87830a3e3fb156dc96cfbd31cb620265dd053be734723f22b760d6cc3c3051"
 
 [[package]]
 name = "auk"
-version = "0.3.0"
-source = "git+https://github.com/maxdeviant/auk.git?rev=75692c2ea294b6eb3dea8cda4df7ac7b8748cdff#75692c2ea294b6eb3dea8cda4df7ac7b8748cdff"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "664edb90b8c73b59ff091e31d571fc073feca07b0430741071ef1da5967d37da"
 dependencies = [
  "indexmap 2.1.0",
 ]
