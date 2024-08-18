@@ -32,7 +32,9 @@ use crate::content::{
     Sections, Taxonomy, TaxonomyTerm, AVERAGE_ADULT_WPM,
 };
 use crate::feed::render_feed;
-use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode};
+use crate::markdown::{
+    markdown_with_shortcodes, DefaultMarkdownComponents, MarkdownComponents, Shortcode,
+};
 use crate::permalink::Permalink;
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext,
@@ -220,7 +222,7 @@ struct BuildSiteParams {
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
     templates: Templates,
-    markdown_components: MarkdownComponents,
+    markdown_components: Box<dyn MarkdownComponents>,
     shortcodes: HashMap<String, Shortcode>,
     taxonomies: Vec<Taxonomy>,
 }
@@ -243,7 +245,7 @@ pub struct Site {
     sass_path: Option<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
-    markdown_components: MarkdownComponents,
+    markdown_components: Box<dyn MarkdownComponents>,
     shortcodes: HashMap<String, Shortcode>,
     pub(crate) sections: Sections,
     pub(crate) pages: Pages,
@@ -999,7 +1001,7 @@ pub struct SiteBuilder<State> {
     title: Option<String>,
     reading_speed: usize,
     templates: Templates,
-    markdown_components: MarkdownComponents,
+    markdown_components: Box<dyn MarkdownComponents>,
     shortcodes: HashMap<String, Shortcode>,
     taxonomies: Vec<Taxonomy>,
     sass_path: Option<PathBuf>,
@@ -1057,7 +1059,7 @@ impl SiteBuilder<()> {
                 taxonomy_term: HashMap::new(),
                 not_found: None,
             },
-            markdown_components: MarkdownComponents::default(),
+            markdown_components: Box::new(DefaultMarkdownComponents),
             shortcodes: HashMap::new(),
             taxonomies: Vec::new(),
             sass_path: None,
@@ -1147,8 +1149,11 @@ impl SiteBuilder<WithTemplates> {
         self
     }
 
-    pub fn with_markdown_components(mut self, markdown_components: MarkdownComponents) -> Self {
-        self.markdown_components = markdown_components;
+    pub fn with_markdown_components(
+        mut self,
+        markdown_components: impl MarkdownComponents + Send + Sync + 'static,
+    ) -> Self {
+        self.markdown_components = Box::new(markdown_components);
         self
     }
 

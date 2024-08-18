@@ -12,217 +12,136 @@ use pulldown_cmark::{
 pub use shortcodes::*;
 use slug::slugify;
 
-pub struct MarkdownComponents {
-    pub div: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub p: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub h1: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub h2: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub h3: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub h4: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub h5: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub h6: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub table: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub thead: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub tbody: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub tr: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub th: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub td: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub blockquote: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub pre: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub code: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub ol: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub ul: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub li: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub em: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub strong: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub del: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub a: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub img: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub br: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub hr: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-    pub sup: Box<dyn Fn() -> HtmlElement + Send + Sync>,
-}
-
-impl MarkdownComponents {
-    #[inline(always)]
-    pub fn div(&self) -> HtmlElement {
-        (self.div)()
+pub trait MarkdownComponents: Send + Sync {
+    fn div(&self) -> HtmlElement {
+        auk::div()
     }
 
-    #[inline(always)]
-    pub fn p(&self) -> HtmlElement {
-        (self.p)()
+    fn p(&self) -> HtmlElement {
+        auk::p()
     }
 
-    #[inline(always)]
-    pub fn h1(&self) -> HtmlElement {
-        (self.h1)()
+    fn h1(&self) -> HtmlElement {
+        auk::h1()
     }
 
-    #[inline(always)]
-    pub fn h2(&self) -> HtmlElement {
-        (self.h2)()
+    fn h2(&self) -> HtmlElement {
+        auk::h2()
     }
 
-    #[inline(always)]
-    pub fn h3(&self) -> HtmlElement {
-        (self.h3)()
+    fn h3(&self) -> HtmlElement {
+        auk::h3()
     }
 
-    #[inline(always)]
-    pub fn h4(&self) -> HtmlElement {
-        (self.h4)()
+    fn h4(&self) -> HtmlElement {
+        auk::h4()
     }
 
-    #[inline(always)]
-    pub fn h5(&self) -> HtmlElement {
-        (self.h5)()
+    fn h5(&self) -> HtmlElement {
+        auk::h5()
     }
 
-    #[inline(always)]
-    pub fn h6(&self) -> HtmlElement {
-        (self.h6)()
+    fn h6(&self) -> HtmlElement {
+        auk::h6()
     }
 
-    #[inline(always)]
-    pub fn table(&self) -> HtmlElement {
-        (self.table)()
+    fn table(&self) -> HtmlElement {
+        auk::table()
     }
 
-    #[inline(always)]
-    pub fn thead(&self) -> HtmlElement {
-        (self.thead)()
+    fn thead(&self) -> HtmlElement {
+        auk::thead()
     }
 
-    #[inline(always)]
-    pub fn tbody(&self) -> HtmlElement {
-        (self.tbody)()
+    fn tbody(&self) -> HtmlElement {
+        auk::tbody()
     }
 
-    #[inline(always)]
-    pub fn tr(&self) -> HtmlElement {
-        (self.tr)()
+    fn tr(&self) -> HtmlElement {
+        auk::tr()
     }
 
-    #[inline(always)]
-    pub fn th(&self) -> HtmlElement {
-        (self.th)()
+    fn th(&self) -> HtmlElement {
+        auk::th()
     }
 
-    #[inline(always)]
-    pub fn td(&self) -> HtmlElement {
-        (self.td)()
+    fn td(&self) -> HtmlElement {
+        auk::td()
     }
 
-    #[inline(always)]
-    pub fn blockquote(&self) -> HtmlElement {
-        (self.blockquote)()
+    fn blockquote(&self) -> HtmlElement {
+        auk::blockquote()
     }
 
-    #[inline(always)]
-    pub fn pre(&self) -> HtmlElement {
-        (self.pre)()
+    fn pre(&self) -> HtmlElement {
+        auk::pre()
     }
 
-    #[inline(always)]
-    pub fn code(&self) -> HtmlElement {
-        (self.code)()
+    fn code(&self) -> HtmlElement {
+        auk::code()
     }
 
-    #[inline(always)]
-    pub fn ol(&self) -> HtmlElement {
-        (self.ol)()
+    fn ol(&self) -> HtmlElement {
+        auk::ol()
     }
 
-    #[inline(always)]
-    pub fn ul(&self) -> HtmlElement {
-        (self.ul)()
+    fn ul(&self) -> HtmlElement {
+        auk::ul()
     }
 
-    #[inline(always)]
-    pub fn li(&self) -> HtmlElement {
-        (self.li)()
+    fn li(&self) -> HtmlElement {
+        auk::li()
     }
 
-    #[inline(always)]
-    pub fn em(&self) -> HtmlElement {
-        (self.em)()
+    fn em(&self) -> HtmlElement {
+        auk::em()
     }
 
-    #[inline(always)]
-    pub fn strong(&self) -> HtmlElement {
-        (self.strong)()
+    fn strong(&self) -> HtmlElement {
+        auk::strong()
     }
 
-    #[inline(always)]
-    pub fn del(&self) -> HtmlElement {
-        (self.del)()
+    fn del(&self) -> HtmlElement {
+        auk::del()
     }
 
-    #[inline(always)]
-    pub fn a(&self) -> HtmlElement {
-        (self.a)()
+    fn a(&self) -> HtmlElement {
+        auk::a()
     }
 
-    #[inline(always)]
-    pub fn img(&self) -> HtmlElement {
-        (self.img)()
+    fn img(&self) -> HtmlElement {
+        auk::img()
     }
 
-    #[inline(always)]
-    pub fn br(&self) -> HtmlElement {
-        (self.br)()
+    fn br(&self) -> HtmlElement {
+        auk::br()
     }
 
-    #[inline(always)]
-    pub fn hr(&self) -> HtmlElement {
-        (self.hr)()
+    fn hr(&self) -> HtmlElement {
+        auk::hr()
     }
 
-    #[inline(always)]
-    pub fn sup(&self) -> HtmlElement {
-        (self.sup)()
+    fn sup(&self) -> HtmlElement {
+        auk::sup()
     }
 }
 
-impl Default for MarkdownComponents {
-    fn default() -> Self {
-        use auk::*;
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct DefaultMarkdownComponents;
 
-        Self {
-            div: Box::new(div),
-            p: Box::new(p),
-            h1: Box::new(h1),
-            h2: Box::new(h2),
-            h3: Box::new(h3),
-            h4: Box::new(h4),
-            h5: Box::new(h5),
-            h6: Box::new(h6),
-            table: Box::new(table),
-            thead: Box::new(thead),
-            tbody: Box::new(tbody),
-            tr: Box::new(tr),
-            th: Box::new(th),
-            td: Box::new(td),
-            blockquote: Box::new(blockquote),
-            pre: Box::new(pre),
-            code: Box::new(code),
-            ol: Box::new(ol),
-            ul: Box::new(ul),
-            li: Box::new(li),
-            em: Box::new(em),
-            strong: Box::new(strong),
-            del: Box::new(del),
-            a: Box::new(a),
-            img: Box::new(img),
-            br: Box::new(br),
-            hr: Box::new(hr),
-            sup: Box::new(sup),
-        }
+impl DefaultMarkdownComponents {
+    #[cfg(test)]
+    pub fn boxed(self) -> Box<dyn MarkdownComponents> {
+        Box::new(self)
     }
 }
 
-pub fn markdown(text: &str, components: &MarkdownComponents) -> (Vec<Element>, TableOfContents) {
+impl MarkdownComponents for DefaultMarkdownComponents {}
+
+pub fn markdown(
+    text: &str,
+    components: &Box<dyn MarkdownComponents>,
+) -> (Vec<Element>, TableOfContents) {
     let mut options = md::Options::empty();
     options.insert(md::Options::ENABLE_TABLES);
     options.insert(md::Options::ENABLE_FOOTNOTES);
@@ -401,7 +320,7 @@ where
     I: Iterator<Item = Event<'a>>,
 {
     input: I,
-    components: &'a MarkdownComponents,
+    components: &'a Box<dyn MarkdownComponents>,
     elements: Vec<Element>,
     current_element_stack: VecDeque<HtmlElement>,
     table_state: TableState,
@@ -414,7 +333,7 @@ impl<'a, I> HtmlElementWriter<'a, I>
 where
     I: Iterator<Item = Event<'a>>,
 {
-    pub fn new(input: I, components: &'a MarkdownComponents) -> Self {
+    pub fn new(input: I, components: &'a Box<dyn MarkdownComponents>) -> Self {
         Self {
             input,
             components,
@@ -721,7 +640,7 @@ mod tests {
     use super::*;
 
     fn parse_and_render_markdown(text: &str) -> String {
-        let (elements, _table_of_contents) = markdown(text, &MarkdownComponents::default());
+        let (elements, _table_of_contents) = markdown(text, &DefaultMarkdownComponents.boxed());
 
         elements
             .into_iter()

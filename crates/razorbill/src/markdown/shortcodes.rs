@@ -47,7 +47,7 @@ pub struct ShortcodeCall {
 
 pub fn markdown_with_shortcodes(
     input: &str,
-    components: &MarkdownComponents,
+    components: &Box<dyn MarkdownComponents>,
     shortcodes: &HashMap<String, Shortcode>,
 ) -> (Vec<Element>, TableOfContents) {
     let (output, shortcode_calls) = parse_document(input).unwrap();
@@ -111,6 +111,8 @@ mod tests {
     use indoc::indoc;
     use serde::Deserialize;
 
+    use crate::markdown::DefaultMarkdownComponents;
+
     use super::*;
 
     fn parse_and_render_markdown_with_shortcodes(
@@ -118,7 +120,7 @@ mod tests {
         shortcodes: HashMap<String, Shortcode>,
     ) -> String {
         let (elements, _table_of_contents) =
-            markdown_with_shortcodes(text, &MarkdownComponents::default(), &shortcodes);
+            markdown_with_shortcodes(text, &DefaultMarkdownComponents.boxed(), &shortcodes);
 
         elements
             .into_iter()

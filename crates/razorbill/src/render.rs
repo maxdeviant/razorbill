@@ -11,7 +11,7 @@ use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode, T
 pub struct BaseRenderContext<'a> {
     pub(crate) base_url: &'a str,
     pub(crate) content_path: &'a Path,
-    pub(crate) markdown_components: &'a MarkdownComponents,
+    pub(crate) markdown_components: &'a Box<dyn MarkdownComponents>,
     pub(crate) shortcodes: &'a HashMap<String, Shortcode>,
     pub(crate) sections: &'a Sections,
     pub(crate) pages: &'a Pages,

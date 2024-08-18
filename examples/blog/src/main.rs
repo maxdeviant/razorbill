@@ -42,10 +42,7 @@ async fn main() -> Result<()> {
                 children: vec![post(ctx.page.content.clone())],
             })
         })
-        .with_markdown_components(MarkdownComponents {
-            p: Box::new(post_paragraph),
-            ..Default::default()
-        })
+        .with_markdown_components(SiteMarkdownComponents)
         .add_shortcode(
             "say_hello",
             Shortcode::new_thunk(|| div().class("heading").child("Hey there!").into()),
@@ -95,6 +92,14 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+struct SiteMarkdownComponents;
+
+impl MarkdownComponents for SiteMarkdownComponents {
+    fn p(&self) -> HtmlElement {
+        post_paragraph()
+    }
 }
 
 struct BasePageProps<'a> {
