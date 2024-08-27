@@ -759,6 +759,9 @@ impl Site {
 
     fn copy_static_directory(&self) -> Result<()> {
         let source = self.static_path.clone();
+        if !source.exists() {
+            return Ok(());
+        }
 
         let walker = WalkDir::new(&source).follow_links(true).into_iter();
 
