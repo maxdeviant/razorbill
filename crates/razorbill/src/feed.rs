@@ -22,6 +22,10 @@ pub fn render_feed(
         .filter(|page| page.meta.date.is_some())
         .collect::<Vec<_>>();
 
+    if pages.is_empty() {
+        return;
+    }
+
     pages.sort_unstable_by(|a, b| {
         b.meta
             .date
