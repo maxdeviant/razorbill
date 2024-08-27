@@ -218,6 +218,7 @@ impl MutVisitor for LiveReloadInjector {
 struct BuildSiteParams {
     base_url: String,
     title: Option<String>,
+    include_drafts: bool,
     reading_speed: usize,
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
@@ -250,6 +251,7 @@ pub struct Site {
     pub(crate) sections: Sections,
     pub(crate) pages: Pages,
     pub(crate) taxonomies: HashMap<String, HashMap<String, Vec<PathBuf>>>,
+    include_drafts: bool,
     is_serving: bool,
     live_reload_port: Option<u16>,
 }
@@ -280,6 +282,7 @@ impl Site {
             sections: Sections::default(),
             pages: Pages::default(),
             taxonomies: HashMap::new(),
+            include_drafts: params.include_drafts,
             is_serving: false,
             live_reload_port: None,
         }
@@ -329,7 +332,7 @@ impl Site {
             ContentAggregator::new(self.content_path.clone(), self.config.taxonomies.clone());
 
         for section in sections {
-            if section.meta.draft {
+            if section.meta.draft && !self.include_drafts {
                 continue;
             }
 
@@ -337,7 +340,7 @@ impl Site {
         }
 
         for page in pages {
-            if page.meta.draft {
+            if page.meta.draft && !self.include_drafts {
                 continue;
             }
 
@@ -999,6 +1002,7 @@ pub struct SiteBuilder<State> {
     root_path: PathBuf,
     base_url: String,
     title: Option<String>,
+    include_drafts: bool,
     reading_speed: usize,
     templates: Templates,
     markdown_components: Box<dyn MarkdownComponents>,
@@ -1014,6 +1018,7 @@ impl<State> SiteBuilder<State> {
             root_path: self.root_path,
             base_url: self.base_url,
             title: self.title,
+            include_drafts: self.include_drafts,
             reading_speed: self.reading_speed,
             templates: self.templates,
             markdown_components: self.markdown_components,
@@ -1027,6 +1032,7 @@ impl<State> SiteBuilder<State> {
         Site::from_params(BuildSiteParams {
             base_url: self.base_url,
             title: self.title,
+            include_drafts: self.include_drafts,
             reading_speed: self.reading_speed,
             root_path: self.root_path,
             sass_path: self.sass_path,
@@ -1035,6 +1041,11 @@ impl<State> SiteBuilder<State> {
             shortcodes: self.shortcodes,
             taxonomies: self.taxonomies,
         })
+    }
+
+    pub fn include_drafts(mut self, include_drafts: bool) -> Self {
+        self.include_drafts = include_drafts;
+        self
     }
 
     pub fn reading_speed(mut self, wpm: usize) -> Self {
@@ -1050,6 +1061,7 @@ impl SiteBuilder<()> {
             root_path: PathBuf::new(),
             base_url: String::new(),
             title: None,
+            include_drafts: false,
             reading_speed: AVERAGE_ADULT_WPM,
             templates: Templates {
                 index: Arc::new(|_| auk::div()),
