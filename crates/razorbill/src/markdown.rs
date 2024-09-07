@@ -21,7 +21,7 @@ pub struct AProps {
 
 /// The props for an `img` element.
 #[derive(Debug)]
-pub struct ImageProps {
+pub struct ImgProps {
     pub src: String,
     pub alt: Option<String>,
     pub title: Option<String>,
@@ -124,7 +124,7 @@ pub trait MarkdownComponents: Send + Sync {
         auk::a().href(props.href).title::<String>(props.title)
     }
 
-    fn img(&self, props: ImageProps) -> HtmlElement {
+    fn img(&self, props: ImgProps) -> HtmlElement {
         auk::img()
             .src(props.src)
             .alt::<String>(props.alt)
@@ -588,7 +588,7 @@ where
                     .filter(|title| !title.is_empty())
                     .map(|title| escape_html(&title));
 
-                self.write(self.components.img(ImageProps {
+                self.write(self.components.img(ImgProps {
                     src: escape_href(&dest),
                     alt,
                     title,
