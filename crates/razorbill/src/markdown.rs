@@ -12,6 +12,14 @@ use pulldown_cmark::{
 pub use shortcodes::*;
 use slug::slugify;
 
+/// The props for an `a` element.
+#[derive(Debug)]
+pub struct AProps {
+    pub href: String,
+    pub title: Option<String>,
+}
+
+/// The props for an `img` element.
 #[derive(Debug)]
 pub struct ImageProps {
     pub src: String,
@@ -112,8 +120,8 @@ pub trait MarkdownComponents: Send + Sync {
         auk::del()
     }
 
-    fn a(&self) -> HtmlElement {
-        auk::a()
+    fn a(&self, props: AProps) -> HtmlElement {
+        auk::a().href(props.href).title::<String>(props.title)
     }
 
     fn img(&self, props: ImageProps) -> HtmlElement {
@@ -401,8 +409,10 @@ where
                     self.write(
                         self.components.sup().class("footnote-reference").child(
                             self.components
-                                .a()
-                                .href(format!("#{}", escape_html(&name)))
+                                .a(AProps {
+                                    href: format!("#{}", escape_html(&name)),
+                                    title: None,
+                                })
                                 .child(number.to_string()),
                         ),
                     );
@@ -557,24 +567,20 @@ where
             Tag::Strong => self.push(self.components.strong()),
             Tag::Strikethrough => self.push(self.components.del()),
             Tag::Link(LinkType::Email, dest, title) => self.push(
-                self.components
-                    .a()
-                    .href(format!("mailto:{}", escape_href(&dest)))
-                    .title::<String>(
-                        Some(title)
-                            .filter(|title| !title.is_empty())
-                            .map(|title| escape_html(&title)),
-                    ),
+                self.components.a(AProps {
+                    href: format!("mailto:{}", escape_href(&dest)),
+                    title: Some(title)
+                        .filter(|title| !title.is_empty())
+                        .map(|title| escape_html(&title)),
+                }),
             ),
             Tag::Link(_link_type, dest, title) => self.push(
-                self.components
-                    .a()
-                    .href(escape_href(&dest))
-                    .title::<String>(
-                        Some(title)
-                            .filter(|title| !title.is_empty())
-                            .map(|title| escape_html(&title)),
-                    ),
+                self.components.a(AProps {
+                    href: escape_href(&dest),
+                    title: Some(title)
+                        .filter(|title| !title.is_empty())
+                        .map(|title| escape_html(&title)),
+                }),
             ),
             Tag::Image(_link_type, dest, title) => {
                 let alt = Some(self.run_raw_text()).filter(|alt| !alt.trim().is_empty());
