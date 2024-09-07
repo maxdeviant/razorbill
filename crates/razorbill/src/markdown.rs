@@ -371,13 +371,9 @@ where
 
                         element.extend([text.into()]);
                     }
-
-                    self.write_img_alt_text(&text);
                 }
                 Event::Code(text) => {
-                    if !self.write_img_alt_text(&text) {
-                        self.write(self.components.code().child(escape_html(&text)));
-                    }
+                    self.write(self.components.code().child(escape_html(&text)));
                 }
                 Event::Html(html) => self.write_raw_html(&html),
                 Event::SoftBreak => {
@@ -406,6 +402,37 @@ where
         }
 
         self.elements
+    }
+
+    fn run_raw_text(&mut self) -> String {
+        let mut nest = 0;
+        let mut raw_text = String::new();
+
+        while let Some(event) = self.input.next() {
+            match event {
+                Event::Start(_) => {
+                    nest += 1;
+                }
+                Event::End(_) => {
+                    if nest == 0 {
+                        break;
+                    }
+
+                    nest -= 1;
+                }
+                Event::Html(_) => {}
+                Event::Text(text) | Event::Code(text) => {
+                    raw_text.push_str(&escape_html(&text));
+                }
+                Event::SoftBreak | Event::HardBreak | Event::Rule => {
+                    raw_text.push(' ');
+                }
+                Event::FootnoteReference(_name) => {}
+                Event::TaskListMarker(_checked) => {}
+            }
+        }
+
+        raw_text
     }
 
     fn write(&mut self, element: HtmlElement) {
@@ -539,16 +566,21 @@ where
                             .map(|title| escape_html(&title)),
                     ),
             ),
-            Tag::Image(_link_type, dest, title) => self.push(
-                self.components
-                    .img()
-                    .src(escape_href(&dest))
-                    .title::<String>(
-                        Some(title)
-                            .filter(|title| !title.is_empty())
-                            .map(|title| escape_html(&title)),
-                    ),
-            ),
+            Tag::Image(_link_type, dest, title) => {
+                let alt = Some(self.run_raw_text()).filter(|alt| !alt.trim().is_empty());
+
+                self.write(
+                    self.components
+                        .img()
+                        .src(escape_href(&dest))
+                        .alt::<String>(alt)
+                        .title::<String>(
+                            Some(title)
+                                .filter(|title| !title.is_empty())
+                                .map(|title| escape_html(&title)),
+                        ),
+                );
+            }
             Tag::FootnoteDefinition(name) => {
                 let next_footnote_number = self.footnotes.len() + 1;
                 let number = *self
@@ -609,26 +641,6 @@ where
                 self.pop();
             }
         }
-    }
-
-    /// Writes the given text to the `alt` attribute of the deepest `img` tag.
-    ///
-    /// If there isn't an `img` tag on the element stack, will return `false`.
-    fn write_img_alt_text(&mut self, text: &str) -> bool {
-        let Some(image) = self
-            .current_element_stack
-            .iter_mut()
-            .rfind(|element| element.tag_name == "img")
-        else {
-            return false;
-        };
-
-        image
-            .attrs
-            .entry("alt".to_string())
-            .or_default()
-            .push_str(&escape_html(&text));
-        true
     }
 }
 
