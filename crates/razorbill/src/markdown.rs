@@ -12,6 +12,13 @@ use pulldown_cmark::{
 pub use shortcodes::*;
 use slug::slugify;
 
+#[derive(Debug)]
+pub struct ImageProps {
+    pub src: String,
+    pub alt: Option<String>,
+    pub title: Option<String>,
+}
+
 pub trait MarkdownComponents: Send + Sync {
     fn div(&self) -> HtmlElement {
         auk::div()
@@ -109,8 +116,11 @@ pub trait MarkdownComponents: Send + Sync {
         auk::a()
     }
 
-    fn img(&self) -> HtmlElement {
+    fn img(&self, props: ImageProps) -> HtmlElement {
         auk::img()
+            .src(props.src)
+            .alt::<String>(props.alt)
+            .title::<String>(props.title)
     }
 
     fn br(&self) -> HtmlElement {
@@ -568,18 +578,15 @@ where
             ),
             Tag::Image(_link_type, dest, title) => {
                 let alt = Some(self.run_raw_text()).filter(|alt| !alt.trim().is_empty());
+                let title = Some(title)
+                    .filter(|title| !title.is_empty())
+                    .map(|title| escape_html(&title));
 
-                self.write(
-                    self.components
-                        .img()
-                        .src(escape_href(&dest))
-                        .alt::<String>(alt)
-                        .title::<String>(
-                            Some(title)
-                                .filter(|title| !title.is_empty())
-                                .map(|title| escape_html(&title)),
-                        ),
-                );
+                self.write(self.components.img(ImageProps {
+                    src: escape_href(&dest),
+                    alt,
+                    title,
+                }));
             }
             Tag::FootnoteDefinition(name) => {
                 let next_footnote_number = self.footnotes.len() + 1;
