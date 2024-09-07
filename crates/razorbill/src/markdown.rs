@@ -562,22 +562,19 @@ where
                 TableState::Body => self.push(self.components.td()),
             },
             Tag::BlockQuote => self.push(self.components.blockquote()),
-            Tag::CodeBlock(kind) => match kind {
-                CodeBlockKind::Fenced(info) => {
-                    let language = Some(info.split(' ').next().unwrap())
+            Tag::CodeBlock(kind) => {
+                let language = match kind {
+                    CodeBlockKind::Fenced(info) => Some(info.split(' ').next().unwrap())
                         .filter(|language| !language.trim().is_empty())
-                        .map(escape_html);
+                        .map(escape_html),
+                    CodeBlockKind::Indented => None,
+                };
 
-                    self.push(self.components.pre(PreProps {
-                        language: language.clone(),
-                    }));
-                    self.push(self.components.code(CodeProps { language }));
-                }
-                CodeBlockKind::Indented => {
-                    self.push(self.components.pre(PreProps { language: None }));
-                    self.push(self.components.code(CodeProps { language: None }));
-                }
-            },
+                self.push(self.components.pre(PreProps {
+                    language: language.clone(),
+                }));
+                self.push(self.components.code(CodeProps { language }));
+            }
             Tag::List(Some(1)) => self.push(self.components.ol()),
             Tag::List(Some(start)) => self.push(self.components.ol().start(start.to_string())),
             Tag::List(None) => self.push(self.components.ul()),
