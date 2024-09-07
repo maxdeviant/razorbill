@@ -124,6 +124,10 @@ pub trait MarkdownComponents: Send + Sync {
         })
     }
 
+    fn on_code_block_end(&self, pre: HtmlElement, code: HtmlElement) -> HtmlElement {
+        pre.child(code)
+    }
+
     fn ol(&self) -> HtmlElement {
         auk::ol()
     }
@@ -656,8 +660,12 @@ where
             }
             Tag::BlockQuote => self.pop(),
             Tag::CodeBlock(_) => {
-                self.pop();
-                self.pop();
+                let code = self.current_element_stack.pop_back();
+                let pre = self.current_element_stack.pop_back();
+
+                if let Some((pre, code)) = pre.zip(code) {
+                    self.write(self.components.on_code_block_end(pre, code));
+                }
             }
             Tag::List(_) => self.pop(),
             Tag::Item => self.pop(),
