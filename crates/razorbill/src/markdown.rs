@@ -3,7 +3,7 @@ mod shortcodes;
 use std::collections::{HashMap, VecDeque};
 
 use auk::visitor::{noop_visit_element, MutVisitor};
-use auk::{Element, HtmlElement, WithChildren};
+use auk::{Element, HtmlElement, With, WithChildren};
 use derive_more::{Deref, DerefMut};
 use pulldown_cmark::{
     self as md, Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag,
@@ -19,12 +19,24 @@ pub struct AProps {
     pub title: Option<String>,
 }
 
+/// The props for a `code` element.
+#[derive(Debug)]
+pub struct CodeProps {
+    pub language: Option<String>,
+}
+
 /// The props for an `img` element.
 #[derive(Debug)]
 pub struct ImgProps {
     pub src: String,
     pub alt: Option<String>,
     pub title: Option<String>,
+}
+
+/// The props for a `pre` element.
+#[derive(Debug)]
+pub struct PreProps {
+    pub language: Option<String>,
 }
 
 pub trait MarkdownComponents: Send + Sync {
@@ -88,12 +100,28 @@ pub trait MarkdownComponents: Send + Sync {
         auk::blockquote()
     }
 
-    fn pre(&self) -> HtmlElement {
-        auk::pre()
+    fn pre(&self, props: PreProps) -> HtmlElement {
+        auk::pre().with(|parent| {
+            if let Some(language) = props.language {
+                parent
+                    .class(format!("language-{language}"))
+                    .attr("data-lang", &language)
+            } else {
+                parent
+            }
+        })
     }
 
-    fn code(&self) -> HtmlElement {
-        auk::code()
+    fn code(&self, props: CodeProps) -> HtmlElement {
+        auk::code().with(|parent| {
+            if let Some(language) = props.language {
+                parent
+                    .class(format!("language-{language}"))
+                    .attr("data-lang", &language)
+            } else {
+                parent
+            }
+        })
     }
 
     fn ol(&self) -> HtmlElement {
@@ -391,7 +419,11 @@ where
                     }
                 }
                 Event::Code(text) => {
-                    self.write(self.components.code().child(escape_html(&text)));
+                    self.write(
+                        self.components
+                            .code(CodeProps { language: None })
+                            .child(escape_html(&text)),
+                    );
                 }
                 Event::Html(html) => self.write_raw_html(&html),
                 Event::SoftBreak => {
@@ -532,31 +564,18 @@ where
             Tag::BlockQuote => self.push(self.components.blockquote()),
             Tag::CodeBlock(kind) => match kind {
                 CodeBlockKind::Fenced(info) => {
-                    let language = info.split(' ').next().unwrap();
-                    if language.is_empty() {
-                        self.push(self.components.pre());
-                        self.push(self.components.code());
-                    } else {
-                        let language = escape_html(language);
-                        let language_class = format!("language-{language}");
+                    let language = Some(info.split(' ').next().unwrap())
+                        .filter(|language| !language.trim().is_empty())
+                        .map(escape_html);
 
-                        self.push(
-                            self.components
-                                .pre()
-                                .attr("data-lang", &language)
-                                .class(&language_class),
-                        );
-                        self.push(
-                            self.components
-                                .code()
-                                .class(language_class)
-                                .attr("data-lang", language),
-                        );
-                    }
+                    self.push(self.components.pre(PreProps {
+                        language: language.clone(),
+                    }));
+                    self.push(self.components.code(CodeProps { language }));
                 }
                 CodeBlockKind::Indented => {
-                    self.push(self.components.pre());
-                    self.push(self.components.code());
+                    self.push(self.components.pre(PreProps { language: None }));
+                    self.push(self.components.code(CodeProps { language: None }));
                 }
             },
             Tag::List(Some(1)) => self.push(self.components.ol()),
