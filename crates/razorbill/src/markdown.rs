@@ -12,16 +12,16 @@ use pulldown_cmark::{
 pub use shortcodes::*;
 use slug::slugify;
 
-/// The attributes for an `a` element.
+/// The props for an `a` element.
 #[derive(Debug)]
-pub struct AAttrs {
+pub struct AProps {
     pub href: String,
     pub title: Option<String>,
 }
 
-/// The attributes for an `img` element.
+/// The props for an `img` element.
 #[derive(Debug)]
-pub struct ImageAttrs {
+pub struct ImageProps {
     pub src: String,
     pub alt: Option<String>,
     pub title: Option<String>,
@@ -120,15 +120,15 @@ pub trait MarkdownComponents: Send + Sync {
         auk::del()
     }
 
-    fn a(&self, attrs: AAttrs) -> HtmlElement {
-        auk::a().href(attrs.href).title::<String>(attrs.title)
+    fn a(&self, props: AProps) -> HtmlElement {
+        auk::a().href(props.href).title::<String>(props.title)
     }
 
-    fn img(&self, attrs: ImageAttrs) -> HtmlElement {
+    fn img(&self, props: ImageProps) -> HtmlElement {
         auk::img()
-            .src(attrs.src)
-            .alt::<String>(attrs.alt)
-            .title::<String>(attrs.title)
+            .src(props.src)
+            .alt::<String>(props.alt)
+            .title::<String>(props.title)
     }
 
     fn br(&self) -> HtmlElement {
@@ -409,7 +409,7 @@ where
                     self.write(
                         self.components.sup().class("footnote-reference").child(
                             self.components
-                                .a(AAttrs {
+                                .a(AProps {
                                     href: format!("#{}", escape_html(&name)),
                                     title: None,
                                 })
@@ -567,7 +567,7 @@ where
             Tag::Strong => self.push(self.components.strong()),
             Tag::Strikethrough => self.push(self.components.del()),
             Tag::Link(LinkType::Email, dest, title) => self.push(
-                self.components.a(AAttrs {
+                self.components.a(AProps {
                     href: format!("mailto:{}", escape_href(&dest)),
                     title: Some(title)
                         .filter(|title| !title.is_empty())
@@ -575,7 +575,7 @@ where
                 }),
             ),
             Tag::Link(_link_type, dest, title) => self.push(
-                self.components.a(AAttrs {
+                self.components.a(AProps {
                     href: escape_href(&dest),
                     title: Some(title)
                         .filter(|title| !title.is_empty())
@@ -588,7 +588,7 @@ where
                     .filter(|title| !title.is_empty())
                     .map(|title| escape_html(&title));
 
-                self.write(self.components.img(ImageAttrs {
+                self.write(self.components.img(ImageProps {
                     src: escape_href(&dest),
                     alt,
                     title,
