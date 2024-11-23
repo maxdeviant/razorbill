@@ -222,6 +222,7 @@ struct BuildSiteParams {
     reading_speed: usize,
     root_path: PathBuf,
     sass_path: Option<PathBuf>,
+    sass_load_paths: Vec<PathBuf>,
     templates: Templates,
     markdown_components: Box<dyn MarkdownComponents>,
     shortcodes: HashMap<String, Shortcode>,
@@ -244,6 +245,7 @@ pub struct Site {
     /// The path to the `static` directory that houses static assets.
     static_path: PathBuf,
     sass_path: Option<PathBuf>,
+    sass_load_paths: Vec<PathBuf>,
     output_path: PathBuf,
     templates: Templates,
     markdown_components: Box<dyn MarkdownComponents>,
@@ -275,6 +277,11 @@ impl Site {
             content_path: root_path.join("content"),
             static_path: root_path.join("static"),
             sass_path: params.sass_path.map(|sass_path| root_path.join(sass_path)),
+            sass_load_paths: params
+                .sass_load_paths
+                .into_iter()
+                .map(|load_path| root_path.join(load_path))
+                .collect(),
             output_path: root_path.join("public"),
             templates: params.templates,
             markdown_components: params.markdown_components,
@@ -532,7 +539,9 @@ impl Site {
                 .map(|entry| entry.into_path())
                 .collect::<Vec<_>>();
 
-            let options = grass::Options::default().style(grass::OutputStyle::Compressed);
+            let options = grass::Options::default()
+                .style(grass::OutputStyle::Compressed)
+                .load_paths(&self.sass_load_paths);
 
             for file in sass_files {
                 let css = grass::from_path(&file, &options).unwrap();
@@ -1012,6 +1021,7 @@ pub struct SiteBuilder<State> {
     shortcodes: HashMap<String, Shortcode>,
     taxonomies: Vec<Taxonomy>,
     sass_path: Option<PathBuf>,
+    sass_load_paths: Vec<PathBuf>,
 }
 
 impl<State> SiteBuilder<State> {
@@ -1028,6 +1038,7 @@ impl<State> SiteBuilder<State> {
             shortcodes: self.shortcodes,
             taxonomies: self.taxonomies,
             sass_path: self.sass_path,
+            sass_load_paths: self.sass_load_paths,
         }
     }
 
@@ -1039,6 +1050,7 @@ impl<State> SiteBuilder<State> {
             reading_speed: self.reading_speed,
             root_path: self.root_path,
             sass_path: self.sass_path,
+            sass_load_paths: self.sass_load_paths,
             templates: self.templates,
             markdown_components: self.markdown_components,
             shortcodes: self.shortcodes,
@@ -1078,6 +1090,7 @@ impl SiteBuilder<()> {
             shortcodes: HashMap::new(),
             taxonomies: Vec::new(),
             sass_path: None,
+            sass_load_paths: Vec::new(),
         }
     }
 
@@ -1208,6 +1221,11 @@ impl SiteBuilder<WithTemplates> {
 pub struct WithSass;
 
 impl SiteBuilder<WithSass> {
+    pub fn add_sass_load_path(mut self, load_path: impl AsRef<Path>) -> Self {
+        self.sass_load_paths.push(load_path.as_ref().to_owned());
+        self
+    }
+
     pub fn build(self) -> Site {
         self.build_site()
     }
