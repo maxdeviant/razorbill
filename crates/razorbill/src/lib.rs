@@ -18,6 +18,7 @@ pub use style::*;
 mod tests {
     use auk::renderer::HtmlElementRenderer;
     use auk::*;
+    use auk_markdown::render_markdown;
     use indoc::indoc;
 
     use super::markdown::*;
@@ -35,7 +36,7 @@ mod tests {
                 div().class("container").child(
                     div()
                         .class("content")
-                        .children(markdown(text, &DefaultMarkdownComponents.boxed()).0),
+                        .children(render_markdown(text, &DefaultMarkdownComponents.boxed()).0),
                 ),
             ),
         );

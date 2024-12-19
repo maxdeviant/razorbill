@@ -13,6 +13,7 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 auk.workspace = true
+auk_markdown.workspace = true
 chrono.workspace = true
 chrono-tz.workspace = true
 derive_more.workspace = true

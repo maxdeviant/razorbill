@@ -3,10 +3,11 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 use auk::Element;
+use auk_markdown::{MarkdownComponents, TableOfContents};
 use serde::Deserialize;
 
 use crate::content::{Page, Pages, ReadTime, Section, Sections, WordCount};
-use crate::markdown::{markdown_with_shortcodes, MarkdownComponents, Shortcode, TableOfContents};
+use crate::markdown::{markdown_with_shortcodes, Shortcode};
 
 pub struct BaseRenderContext<'a> {
     pub(crate) base_url: &'a str,

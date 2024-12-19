@@ -10,6 +10,7 @@ use anyhow::Result;
 use auk::renderer::HtmlElementRenderer;
 use auk::visitor::{noop_visit_element, MutVisitor, Visitor};
 use auk::HtmlElement;
+use auk_markdown::MarkdownComponents;
 use http_body_util::combinators::BoxBody;
 use http_body_util::{BodyExt, Empty, Full};
 use hyper::body::Bytes;
@@ -32,9 +33,7 @@ use crate::content::{
     Sections, Taxonomy, TaxonomyTerm, AVERAGE_ADULT_WPM,
 };
 use crate::feed::render_feed;
-use crate::markdown::{
-    markdown_with_shortcodes, DefaultMarkdownComponents, MarkdownComponents, Shortcode,
-};
+use crate::markdown::{markdown_with_shortcodes, DefaultMarkdownComponents, Shortcode};
 use crate::permalink::Permalink;
 use crate::render::{
     BaseRenderContext, PageToRender, RenderPageContext, RenderSectionContext,

@@ -3,13 +3,13 @@ use std::path::{Path, PathBuf};
 use std::{fmt, fs};
 
 use auk::Element;
+use auk_markdown::TableOfContents;
 use serde::Deserialize;
 use thiserror::Error;
 
 use crate::content::{
     from_toml_datetime, parse_front_matter, FileInfo, ReadTime, ReadingMetrics, WordCount,
 };
-use crate::markdown::TableOfContents;
 use crate::permalink::Permalink;
 use crate::SiteConfig;
 

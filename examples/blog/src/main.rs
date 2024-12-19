@@ -1,8 +1,9 @@
 use anyhow::Result;
 use auk::*;
+use auk_markdown::MarkdownComponents;
 use clap::{Parser, Subcommand};
 use razorbill::content::Taxonomy;
-use razorbill::markdown::{MarkdownComponents, Shortcode};
+use razorbill::markdown::Shortcode;
 use razorbill::render::{PageToRender, RenderPageContext, RenderSectionContext};
 use razorbill::{plumage, Site};
 use serde::Deserialize;

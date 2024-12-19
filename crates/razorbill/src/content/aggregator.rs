@@ -161,13 +161,13 @@ impl ContentAggregator {
 
 #[cfg(test)]
 mod tests {
+    use auk_markdown::TableOfContents;
     use pretty_assertions::assert_eq;
 
     use crate::content::{
         FileInfo, MaybeSortBy, PageFrontMatter, PagePath, ReadTime, SectionFrontMatter,
         SectionPath, SortBy, WordCount, AVERAGE_ADULT_WPM,
     };
-    use crate::markdown::TableOfContents;
     use crate::permalink::Permalink;
     use crate::SiteConfig;
 

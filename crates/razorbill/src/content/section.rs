@@ -2,13 +2,13 @@ use std::path::{Path, PathBuf};
 use std::{fmt, fs, io};
 
 use auk::Element;
+use auk_markdown::TableOfContents;
 use serde::Deserialize;
 use thiserror::Error;
 
 use crate::content::{
     parse_front_matter, FileInfo, MaybeSortBy, ReadTime, ReadingMetrics, WordCount,
 };
-use crate::markdown::TableOfContents;
 use crate::permalink::Permalink;
 use crate::SiteConfig;
 

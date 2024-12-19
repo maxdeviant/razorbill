@@ -5,11 +5,11 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use auk::{Element, HtmlElement};
+use auk_markdown::{render_markdown, MarkdownComponents, TableOfContents};
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 
 use crate::markdown::shortcodes::parser::parse_document;
-use crate::markdown::{markdown, MarkdownComponents, TableOfContents};
 
 const SHORTCODE_PLACEHOLDER: &str = "@@RAZORBILL_SHORTCODE@@";
 
@@ -51,7 +51,7 @@ pub fn markdown_with_shortcodes(
     shortcodes: &HashMap<String, Shortcode>,
 ) -> (Vec<Element>, TableOfContents) {
     let (output, shortcode_calls) = parse_document(input).unwrap();
-    let (elements, table_of_contents) = markdown(&output, components);
+    let (elements, table_of_contents) = render_markdown(&output, components);
     let elements = replace_shortcodes(elements, shortcodes, &mut shortcode_calls.into_iter());
 
     (elements, table_of_contents)
