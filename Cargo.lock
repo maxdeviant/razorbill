@@ -109,7 +109,7 @@ checksum = "ca87830a3e3fb156dc96cfbd31cb620265dd053be734723f22b760d6cc3c3051"
 [[package]]
 name = "auk"
 version = "0.6.0"
-source = "git+https://github.com/maxdeviant/auk.git?rev=ad9b17420a2ee6fb5cde5e953b0b1021991f44ea#ad9b17420a2ee6fb5cde5e953b0b1021991f44ea"
+source = "git+https://github.com/maxdeviant/auk.git?rev=ecf9cfa7ac7435dacf52e9b0c41d9459d1863a68#ecf9cfa7ac7435dacf52e9b0c41d9459d1863a68"
 dependencies = [
  "indexmap 2.1.0",
  "pulldown-cmark-escape",
@@ -118,7 +118,7 @@ dependencies = [
 [[package]]
 name = "auk_markdown"
 version = "0.1.0"
-source = "git+https://github.com/maxdeviant/auk.git?rev=ad9b17420a2ee6fb5cde5e953b0b1021991f44ea#ad9b17420a2ee6fb5cde5e953b0b1021991f44ea"
+source = "git+https://github.com/maxdeviant/auk.git?rev=ecf9cfa7ac7435dacf52e9b0c41d9459d1863a68#ecf9cfa7ac7435dacf52e9b0c41d9459d1863a68"
 dependencies = [
  "auk",
  "derive_more",

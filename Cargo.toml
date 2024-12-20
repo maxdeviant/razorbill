@@ -4,8 +4,8 @@ members = ["crates/*", "examples/*"]
 
 [workspace.dependencies]
 anyhow = "1.0.78"
-auk = { git = "https://github.com/maxdeviant/auk.git", rev = "ad9b17420a2ee6fb5cde5e953b0b1021991f44ea" }
-auk_markdown = { git = "https://github.com/maxdeviant/auk.git", rev = "ad9b17420a2ee6fb5cde5e953b0b1021991f44ea" }
+auk = { git = "https://github.com/maxdeviant/auk.git", rev = "ecf9cfa7ac7435dacf52e9b0c41d9459d1863a68" }
+auk_markdown = { git = "https://github.com/maxdeviant/auk.git", rev = "ecf9cfa7ac7435dacf52e9b0c41d9459d1863a68" }
 clap = "4.4.13"
 chrono = "0.4.31"
 chrono-tz = "0.8.5"
