@@ -222,7 +222,7 @@ impl Visitor for XmlRenderer {
         Ok(())
     }
 
-    fn visit_text(&mut self, text: &str) -> Result<(), Self::Error> {
+    fn visit_text(&mut self, text: &str, _safe: bool) -> Result<(), Self::Error> {
         write!(&mut self.xml, "{}", text)?;
 
         Ok(())
