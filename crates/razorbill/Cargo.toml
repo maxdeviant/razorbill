@@ -23,7 +23,7 @@ hyper = { workspace = true, features = ["full"] }
 hyper-util = { workspace = true, features = ["full"] }
 indexmap.workspace = true
 mime_guess.workspace = true
-notify = { workspace = true, default-features = false, features = ["macos_kqueue"] }
+notify = { workspace = true, default-features = false, features = ["macos_fsevent"] }
 once_cell.workspace = true
 pest.workspace = true
 pest_derive.workspace = true
